@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Monitor, Settings, Search, Plus, Edit3, CheckCircle, AlertCircle, Clock,
-  Trash2 } from 'lucide-react';
+import { Calendar, Settings, Search, Plus, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 
 // --- 1. DEFINIÇÕES DE TIPOS E INTERFACES ---
 interface TabButtonProps {
   label: string;
-  value: string;
+  value: 'equipamentos' | 'agendadas' | 'pendentes' | 'realizadas'; // Tipo ajustado
   current: string;
-  setTab: (value: string) => void;
+  setTab: (value: 'equipamentos' | 'agendadas' | 'pendentes' | 'realizadas') => void; // Tipo ajustado
   count: number;
-  activeColorClass: string; // Adicionada nova propriedade para a cor ativa
+  activeColorClass: string;
 }
 
 type Machine = {
@@ -19,7 +18,7 @@ type Machine = {
   etiqueta: string;
   chamado: string;
   proximaManutencao: string;
-  dataRealizacao: string; // Data em que a manutenção foi de fato realizada
+  dataRealizacao: string;
   status: 'pendente' | 'agendado' | 'concluido';
 };
 
@@ -30,13 +29,13 @@ const TabButton = ({
   current,
   setTab,
   count,
-  activeColorClass // Recebe a nova propriedade
+  activeColorClass
 }: TabButtonProps) => {
   return (
     <button
       className={`flex flex-col items-center px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
         current === value
-          ? `${activeColorClass} text-white` // Usa a cor ativa e texto branco
+          ? `${activeColorClass} text-white`
           : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
       }`}
       onClick={() => setTab(value)}
@@ -143,8 +142,8 @@ const MachineForm = ({
               name="proximaManutencao"
               value={formData.proximaManutencao}
               onChange={handleChange}
-              readOnly={true} // Adicionado readOnly
-              className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed" // Estilo para indicar que é somente leitura
+              readOnly={true}
+              className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
             />
           </div>
           {/* CAMPO 'Data Realização' REMOVIDO */}
@@ -172,10 +171,10 @@ const MachineForm = ({
 
 // NOVO COMPONENTE: Formulário para Novo Agendamento
 const AppointmentForm = ({
-    machines, // Lista de máquinas disponíveis para agendamento
-    onSave, // Função para salvar o agendamento
-    onCancel, // Função para cancelar o formulário
-    today // Data de hoje para validação
+    machines,
+    onSave,
+    onCancel,
+    today
 }: {
     machines: Machine[];
     onSave: (machineId: number, appointmentDate: string) => void;
@@ -186,15 +185,12 @@ const AppointmentForm = ({
     const [appointmentDate, setAppointmentDate] = useState<string>('');
     const [error, setError] = useState<string | null>(null);
 
-    // Filtra máquinas que não foram realizadas e ainda não têm proximaManutencao agendada para o futuro
-    // Ou máquinas que são novas (não tem proximaManutencao ainda)
     const availableMachines = machines.filter(m =>
         !m.dataRealizacao && (!m.proximaManutencao || new Date(m.proximaManutencao) < new Date(today))
     );
 
-
     const handleSubmit = () => {
-        setError(null); // Limpa erros anteriores
+        setError(null);
 
         if (!selectedMachineId) {
             setError('Por favor, selecione uma máquina.');
@@ -266,57 +262,7 @@ const AppointmentForm = ({
     );
 };
 
-
-// --- 3. FUNÇÕES UTILITÁRIAS (fora de qualquer componente) ---
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'concluido':
-      return 'bg-green-100 text-green-800 border-green-200';
-    case 'agendado':
-      return 'bg-blue-100 text-blue-800 border-blue-200';
-    case 'pendente':
-      return 'bg-red-100 text-red-800 border-red-200'; // vermelho
-    default:
-      return 'bg-gray-100 text-gray-800 border-gray-200';
-  }
-};
-
-const getStatusIcon = (status: string) => {
-  switch (status) {
-    case 'concluido':
-      return <CheckCircle className="w-4 h-4" />;
-    case 'agendado':
-      return <Calendar className="w-4 h-4" />;
-    case 'pendente':
-      return <AlertCircle className="w-4 h-4" />;
-    default:
-      return <Clock className="w-4 h-4" />;
-  }
-};
-
-const getSectorColor = (sector: string) => {
-  const colors: Record<string, string> = {
-    TI: 'bg-purple-500',
-    DIR: 'bg-red-500',
-    BAL: 'bg-green-500',
-    FIN: 'bg-blue-500',
-    FAT: 'bg-yellow-500',
-    LOG: 'bg-indigo-500',
-    TLM: 'bg-pink-500',
-    COM: 'bg-teal-500',
-    DEP: 'bg-orange-500',
-    IND: 'bg-cyan-500',
-    DP: 'bg-lime-500',
-    WMS: 'bg-violet-500',
-    REC: 'bg-amber-500',
-    ROT: 'bg-emerald-500',
-    SPCOM: 'bg-rose-500',
-    CX: 'bg-sky-500',
-  };
-  return colors[sector] || 'bg-gray-500';
-};
-
-// --- 4. COMPONENTE PRINCIPAL (MaintenanceApp) ---
+// --- 3. COMPONENTE PRINCIPAL (MaintenanceApp) ---
 const MaintenanceApp = () => {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -326,16 +272,12 @@ const MaintenanceApp = () => {
   const [showMachineForm, setShowMachineForm] = useState(false);
   const [showNewAppointmentForm, setShowNewAppointmentForm] = useState(false);
 
-  // NOVO: Estado para controlar qual data está sendo editada
   const [editingDateId, setEditingDateId] = useState<number | null>(null);
-  // NOVO: Estado temporário para o valor do input de data enquanto está sendo editado
   const [currentEditingDateValue, setCurrentEditingDateValue] = useState<string>('');
-
 
   const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
-    // Seus dados iniciais completos estão aqui.
     const initialData = [{ setor: 'TI', maquina: 'infoti-pc', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' },
     { setor: 'TI', maquina: 'info-pc', etiqueta: 'MA-5L6M7N8-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
     { setor: 'DIR', maquina: 'dir-ronildo-pc', etiqueta: 'MA-1E2F3G4-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
@@ -382,18 +324,17 @@ const MaintenanceApp = () => {
     { setor: 'CX', maquina: 'cxmultpel-pc', etiqueta: 'MA-9O0P1Q2-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
     { setor: 'TI', maquina: 'SRV Domain', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' },
     { setor: 'TI', maquina: 'SRVTS', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' }];
+    
     const machinesWithId = initialData.map((machine, index) => ({
       ...machine,
       id: index + 1,
-      // Se não houver proximaManutencao, defina o status como pendente.
-      // Isso é importante para máquinas recém-adicionadas que precisam de um primeiro agendamento.
       status: machine.dataRealizacao
         ? 'concluido'
         : machine.proximaManutencao
         ? new Date(machine.proximaManutencao) < new Date(today)
           ? 'pendente'
           : 'agendado'
-        : 'pendente', // Se não tem data de realização e nem proximaManutencao, é pendente por padrão
+        : 'pendente',
     }));
     setMachines(machinesWithId);
   }, []);
@@ -411,18 +352,17 @@ const MaintenanceApp = () => {
       !m.dataRealizacao &&
       m.proximaManutencao &&
       new Date(m.proximaManutencao) >= new Date(today)
-  ).sort((a, b) => a.proximaManutencao.localeCompare(b.proximaManutencao)); // Ordena por data
+  ).sort((a, b) => a.proximaManutencao.localeCompare(b.proximaManutencao));
 
   const pendentes = machines.filter(
     (m) =>
       !m.dataRealizacao &&
       m.proximaManutencao &&
       new Date(m.proximaManutencao) < new Date(today)
-  ).sort((a, b) => a.proximaManutencao.localeCompare(b.proximaManutencao)); // Ordena por data
+  ).sort((a, b) => a.proximaManutencao.localeCompare(b.proximaManutencao));
 
   const realizadas = machines.filter((m) => m.dataRealizacao)
-    .sort((a, b) => b.dataRealizacao.localeCompare(a.dataRealizacao)); // Ordena pelas mais recentes
-
+    .sort((a, b) => b.dataRealizacao.localeCompare(a.dataRealizacao));
 
   const sectors = [...new Set(machines.map((m) => m.setor))].sort();
 
@@ -433,7 +373,7 @@ const MaintenanceApp = () => {
 
   const handleEdit = (machine: Machine) => {
     setEditingMachine(machine);
-    setShowMachineForm(true); // Usa showMachineForm
+    setShowMachineForm(true);
   };
 
   const handleDelete = (id: number) => {
@@ -448,16 +388,14 @@ const MaintenanceApp = () => {
         prev.map((m) => (m.id === editingMachine.id ? { ...m, ...formData } : m))
       );
     } else {
-      // Para novas máquinas, defina um status inicial se proximaManutencao não for fornecida
       const newMachine = {
         ...formData,
-        id: Math.max(...machines.map((m) => m.id), 0) + 1, // Garante que o ID comece do 1 se o array estiver vazio
-        // Se a próxima manutenção não for preenchida, ela será inicialmente pendente
+        id: Math.max(...machines.map((m) => m.id), 0) + 1,
         status: formData.proximaManutencao ? new Date(formData.proximaManutencao) >= new Date(today) ? 'agendado' : 'pendente' : 'pendente',
       };
       setMachines((prev) => [...prev, newMachine]);
     }
-    setShowMachineForm(false); // Usa showMachineForm
+    setShowMachineForm(false);
     setEditingMachine(null);
   };
 
@@ -467,7 +405,6 @@ const MaintenanceApp = () => {
         const completedMachine = prevMachines.find(m => m.id === id);
 
         if (completedMachine) {
-            // 1. Atualizar a máquina atual: definir a data de realização e status para 'concluido'
             updatedMachines = prevMachines.map((machine) => {
                 if (machine.id === id) {
                     return {
@@ -479,11 +416,9 @@ const MaintenanceApp = () => {
                 return machine;
             });
 
-            // 2. Se uma data de realização foi realmente inserida, criar uma nova entrada para o próximo ciclo
-            // Cria um novo registro para a próxima manutenção (90 dias após a realização)
             if (newCompletionDate) {
                 const completedDateObj = new Date(newCompletionDate);
-                completedDateObj.setDate(completedDateObj.getDate() + 90); // Adiciona 90 dias
+                completedDateObj.setDate(completedDateObj.getDate() + 90);
 
                 const nextMaintenanceDate = completedDateObj.toISOString().split('T')[0];
 
@@ -493,7 +428,7 @@ const MaintenanceApp = () => {
                     ...completedMachine,
                     id: newMachineId,
                     proximaManutencao: nextMaintenanceDate,
-                    dataRealizacao: '', // Limpa a data de realização para o novo agendamento
+                    dataRealizacao: '',
                     status: new Date(nextMaintenanceDate) < new Date(today) ? 'pendente' : 'agendado',
                 };
                 updatedMachines = [...updatedMachines, newCycleMachine];
@@ -501,7 +436,7 @@ const MaintenanceApp = () => {
         }
         return updatedMachines;
     });
-    setEditingDateId(null); // Sai do modo de edição após salvar
+    setEditingDateId(null);
   };
 
   const startEditingDate = (id: number, currentValue: string) => {
@@ -509,12 +444,10 @@ const MaintenanceApp = () => {
     setCurrentEditingDateValue(currentValue);
   };
 
-  // NOVO: Função para salvar um novo agendamento
   const handleNewAppointmentSave = (machineId: number, appointmentDate: string) => {
     setMachines((prevMachines) => {
         return prevMachines.map((m) => {
             if (m.id === machineId) {
-                // Atualiza a máquina existente com a nova data de agendamento e status
                 return {
                     ...m,
                     proximaManutencao: appointmentDate,
@@ -524,9 +457,8 @@ const MaintenanceApp = () => {
             return m;
         });
     });
-    setShowNewAppointmentForm(false); // Fecha o formulário de agendamento
+    setShowNewAppointmentForm(false);
   };
-
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
@@ -544,12 +476,11 @@ const MaintenanceApp = () => {
                 <p className="text-gray-600">Visualização por Status</p>
               </div>
             </div>
-            {/* Renderização condicional dos botões */}
             {tab === 'equipamentos' && (
               <button
                 onClick={() => {
                   setEditingMachine(null);
-                  setShowMachineForm(true); // Abre formulário de máquina
+                  setShowMachineForm(true);
                 }}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl flex items-center gap-2"
               >
@@ -560,7 +491,7 @@ const MaintenanceApp = () => {
 
             {tab === 'agendadas' && (
               <button
-                onClick={() => setShowNewAppointmentForm(true)} // Abre formulário de novo agendamento
+                onClick={() => setShowNewAppointmentForm(true)}
                 className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-xl flex items-center gap-2"
               >
                 <Calendar className="w-5 h-5" />
@@ -569,7 +500,6 @@ const MaintenanceApp = () => {
             )}
           </div>
 
-          {/* Tabs: Agora passando as contagens e a classe de cor ativa */}
           <div className="flex gap-4 mb-8">
             <TabButton label="Equipamentos" value="equipamentos" current={tab} setTab={setTab} count={equipamentosCount} activeColorClass="bg-blue-600" />
             <TabButton label="Agendadas" value="agendadas" current={tab} setTab={setTab} count={agendadasCount} activeColorClass="bg-purple-600" />
@@ -577,7 +507,6 @@ const MaintenanceApp = () => {
             <TabButton label="Realizadas" value="realizadas" current={tab} setTab={setTab} count={realizadasCount} activeColorClass="bg-green-600" />
           </div>
 
-          {/* Filtros apenas para Equipamentos */}
           {tab === 'equipamentos' && (
             <div className="flex flex-col md:flex-row gap-4 mb-8">
               <div className="flex-1 relative">
@@ -605,7 +534,6 @@ const MaintenanceApp = () => {
             </div>
           )}
 
-          {/* Tabelas por tipo */}
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
@@ -746,7 +674,6 @@ const MaintenanceApp = () => {
             </table>
           </div>
 
-          {/* Renderiza MachineForm se showMachineForm for verdadeiro */}
           {showMachineForm && (
             <MachineForm
               machine={editingMachine}
@@ -759,7 +686,6 @@ const MaintenanceApp = () => {
             />
           )}
 
-          {/* Renderiza AppointmentForm se showNewAppointmentForm for verdadeiro */}
           {showNewAppointmentForm && (
             <AppointmentForm
               machines={machines}
@@ -774,5 +700,4 @@ const MaintenanceApp = () => {
   );
 };
 
-// Exporta o componente principal para ser usado em index.tsx ou main.tsx
 export default MaintenanceApp;
