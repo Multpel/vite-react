@@ -1,35 +1,778 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React, { useState, useEffect } from 'react';
+import { Calendar, Monitor, Settings, Search, Plus, Edit3, CheckCircle, AlertCircle, Clock,
+  Trash2 } from 'lucide-react';
 
-function App() {
-  const [count, setCount] = useState(0)
-
-  return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+// --- 1. DEFINIÇÕES DE TIPOS E INTERFACES ---
+interface TabButtonProps {
+  label: string;
+  value: string;
+  current: string;
+  setTab: (value: string) => void;
+  count: number;
+  activeColorClass: string; // Adicionada nova propriedade para a cor ativa
 }
 
-export default App
+type Machine = {
+  id: number;
+  setor: string;
+  maquina: string;
+  etiqueta: string;
+  chamado: string;
+  proximaManutencao: string;
+  dataRealizacao: string; // Data em que a manutenção foi de fato realizada
+  status: 'pendente' | 'agendado' | 'concluido';
+};
+
+// --- 2. COMPONENTES AUXILIARES ---
+const TabButton = ({
+  label,
+  value,
+  current,
+  setTab,
+  count,
+  activeColorClass // Recebe a nova propriedade
+}: TabButtonProps) => {
+  return (
+    <button
+      className={`flex flex-col items-center px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+        current === value
+          ? `${activeColorClass} text-white` // Usa a cor ativa e texto branco
+          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+      }`}
+      onClick={() => setTab(value)}
+    >
+      <span>{label}</span>
+      <span className={`text-xs mt-1 ${current === value ? 'text-white' : 'text-gray-500'}`}>
+        ({count})
+      </span>
+    </button>
+  );
+};
+
+const MachineForm = ({
+  machine,
+  onSave,
+  onCancel,
+  sectors,
+}: {
+  machine: Machine | null;
+  onSave: (formData: Machine) => void;
+  onCancel: () => void;
+  sectors: string[];
+}) => {
+  const [formData, setFormData] = useState<Machine>(
+    machine || {
+      id: 0,
+      setor: '',
+      maquina: '',
+      etiqueta: '',
+      chamado: '',
+      proximaManutencao: '',
+      dataRealizacao: '',
+      status: 'pendente',
+    }
+  );
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = () => {
+    onSave(formData);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl p-6 w-full max-w-md">
+        <h3 className="text-xl font-bold mb-4">
+          {machine ? 'Editar Máquina' : 'Nova Máquina'}
+        </h3>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Setor</label>
+            <select
+              name="setor"
+              value={formData.setor}
+              onChange={handleChange}
+              className="w-full p-2 border rounded-lg"
+            >
+              <option value="">Selecione o setor</option>
+              {sectors.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Máquina</label>
+            <input
+              type="text"
+              name="maquina"
+              value={formData.maquina}
+              onChange={handleChange}
+              className="w-full p-2 border rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Etiqueta</label>
+            <input
+              type="text"
+              name="etiqueta"
+              value={formData.etiqueta}
+              onChange={handleChange}
+              className="w-full p-2 border rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Chamado</label>
+            <input
+              type="text"
+              name="chamado"
+              value={formData.chamado}
+              onChange={handleChange}
+              className="w-full p-2 border rounded-lg"
+            />
+          </div>
+          {/* CAMPO 'Próxima Manutenção' AGORA É SOMENTE LEITURA */}
+          <div>
+            <label className="block text-sm font-medium mb-1">Próxima Manutenção</label>
+            <input
+              type="date"
+              name="proximaManutencao"
+              value={formData.proximaManutencao}
+              onChange={handleChange}
+              readOnly={true} // Adicionado readOnly
+              className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed" // Estilo para indicar que é somente leitura
+            />
+          </div>
+          {/* CAMPO 'Data Realização' REMOVIDO */}
+          <div className="flex gap-2 pt-4">
+            <button
+              type="button"
+              onClick={handleSubmit}
+              className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700"
+            >
+              Salvar
+            </button>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// NOVO COMPONENTE: Formulário para Novo Agendamento
+const AppointmentForm = ({
+    machines, // Lista de máquinas disponíveis para agendamento
+    onSave, // Função para salvar o agendamento
+    onCancel, // Função para cancelar o formulário
+    today // Data de hoje para validação
+}: {
+    machines: Machine[];
+    onSave: (machineId: number, appointmentDate: string) => void;
+    onCancel: () => void;
+    today: string;
+}) => {
+    const [selectedMachineId, setSelectedMachineId] = useState<number | ''>('');
+    const [appointmentDate, setAppointmentDate] = useState<string>('');
+    const [error, setError] = useState<string | null>(null);
+
+    // Filtra máquinas que não foram realizadas e ainda não têm proximaManutencao agendada para o futuro
+    // Ou máquinas que são novas (não tem proximaManutencao ainda)
+    const availableMachines = machines.filter(m =>
+        !m.dataRealizacao && (!m.proximaManutencao || new Date(m.proximaManutencao) < new Date(today))
+    );
+
+
+    const handleSubmit = () => {
+        setError(null); // Limpa erros anteriores
+
+        if (!selectedMachineId) {
+            setError('Por favor, selecione uma máquina.');
+            return;
+        }
+        if (!appointmentDate) {
+            setError('Por favor, selecione uma data de agendamento.');
+            return;
+        }
+        if (new Date(appointmentDate) < new Date(today)) {
+            setError('A data de agendamento não pode ser no passado.');
+            return;
+        }
+
+        onSave(Number(selectedMachineId), appointmentDate);
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl p-6 w-full max-w-md">
+                <h3 className="text-xl font-bold mb-4">Novo Agendamento</h3>
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium mb-1">Selecionar Máquina</label>
+                        <select
+                            value={selectedMachineId}
+                            onChange={(e) => setSelectedMachineId(Number(e.target.value))}
+                            className="w-full p-2 border rounded-lg"
+                        >
+                            <option value="">Selecione uma máquina</option>
+                            {availableMachines.map(m => (
+                                <option key={m.id} value={m.id}>
+                                    {m.maquina} ({m.setor}) - {m.etiqueta || 'Sem Etiqueta'}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1">Data de Agendamento</label>
+                        <input
+                            type="date"
+                            value={appointmentDate}
+                            onChange={(e) => setAppointmentDate(e.target.value)}
+                            className="w-full p-2 border rounded-lg"
+                        />
+                    </div>
+
+                    {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+
+                    <div className="flex gap-2 pt-4">
+                        <button
+                            type="button"
+                            onClick={handleSubmit}
+                            className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700"
+                        >
+                            Agendar
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onCancel}
+                            className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700"
+                        >
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
+// --- 3. FUNÇÕES UTILITÁRIAS (fora de qualquer componente) ---
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'concluido':
+      return 'bg-green-100 text-green-800 border-green-200';
+    case 'agendado':
+      return 'bg-blue-100 text-blue-800 border-blue-200';
+    case 'pendente':
+      return 'bg-red-100 text-red-800 border-red-200'; // vermelho
+    default:
+      return 'bg-gray-100 text-gray-800 border-gray-200';
+  }
+};
+
+const getStatusIcon = (status: string) => {
+  switch (status) {
+    case 'concluido':
+      return <CheckCircle className="w-4 h-4" />;
+    case 'agendado':
+      return <Calendar className="w-4 h-4" />;
+    case 'pendente':
+      return <AlertCircle className="w-4 h-4" />;
+    default:
+      return <Clock className="w-4 h-4" />;
+  }
+};
+
+const getSectorColor = (sector: string) => {
+  const colors: Record<string, string> = {
+    TI: 'bg-purple-500',
+    DIR: 'bg-red-500',
+    BAL: 'bg-green-500',
+    FIN: 'bg-blue-500',
+    FAT: 'bg-yellow-500',
+    LOG: 'bg-indigo-500',
+    TLM: 'bg-pink-500',
+    COM: 'bg-teal-500',
+    DEP: 'bg-orange-500',
+    IND: 'bg-cyan-500',
+    DP: 'bg-lime-500',
+    WMS: 'bg-violet-500',
+    REC: 'bg-amber-500',
+    ROT: 'bg-emerald-500',
+    SPCOM: 'bg-rose-500',
+    CX: 'bg-sky-500',
+  };
+  return colors[sector] || 'bg-gray-500';
+};
+
+// --- 4. COMPONENTE PRINCIPAL (MaintenanceApp) ---
+const MaintenanceApp = () => {
+  const [machines, setMachines] = useState<Machine[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSector, setSelectedSector] = useState('');
+  const [tab, setTab] = useState<'equipamentos' | 'agendadas' | 'pendentes' | 'realizadas'>('equipamentos');
+  const [editingMachine, setEditingMachine] = useState<Machine | null>(null);
+  const [showMachineForm, setShowMachineForm] = useState(false);
+  const [showNewAppointmentForm, setShowNewAppointmentForm] = useState(false);
+
+  // NOVO: Estado para controlar qual data está sendo editada
+  const [editingDateId, setEditingDateId] = useState<number | null>(null);
+  // NOVO: Estado temporário para o valor do input de data enquanto está sendo editado
+  const [currentEditingDateValue, setCurrentEditingDateValue] = useState<string>('');
+
+
+  const today = new Date().toISOString().split('T')[0];
+
+  useEffect(() => {
+    // Seus dados iniciais completos estão aqui.
+    const initialData = [{ setor: 'TI', maquina: 'infoti-pc', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'TI', maquina: 'info-pc', etiqueta: 'MA-5L6M7N8-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'DIR', maquina: 'dir-ronildo-pc', etiqueta: 'MA-1E2F3G4-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'DIR', maquina: 'ronilson-pc', etiqueta: 'MA-5H6I7J8-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'BAL', maquina: 'bal1-pc', etiqueta: 'MA-3R4S5T6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'BAL', maquina: 'bal2-pc', etiqueta: 'MA-7U8V9W0-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'BAL', maquina: 'bal3-pc', etiqueta: 'MA-1M2N3O4-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'BAL', maquina: 'bal4-pc', etiqueta: 'MA-5P6Q7R8-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'FIN', maquina: 'cobranca-pc', etiqueta: 'MA-9G0H1L2-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'FAT', maquina: 'fat2-pc', etiqueta: 'MA-3G4H5I6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'LOG', maquina: 'ctrlfrota-pc', etiqueta: 'MA-3V4W5X6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'TLM', maquina: 'tele2-pc', etiqueta: 'MA-1T2U3V4-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'COM', maquina: 'adm-pc', etiqueta: 'MA-3N4O5P6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'TLM', maquina: 'tele3-pc', etiqueta: 'MA-5W6X7Y8-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'TLM', maquina: 'tele5-pc', etiqueta: 'MA-3C4D5E6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'TLM', maquina: 'telemkt1-pc', etiqueta: 'MA-7Q8R9S0-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'LOG', maquina: 'enc-pc', etiqueta: 'MA-7Y8Z9A0-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'DEP', maquina: 'ava-pc', etiqueta: 'MA-3M4N5O6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'FIN', maquina: 'camera-pc', etiqueta: 'MA-3B4C5D6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'DEP', maquina: 'box-pc', etiqueta: 'MA-9J0K1L2-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'DEP', maquina: 'check-pc', etiqueta: 'MA-5F6G7H8I-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'FAT', maquina: 'cadastro-pc', etiqueta: 'MA-7M8N9O0-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'IND', maquina: 'ind-pc', etiqueta: 'MA-7P8Q9R0-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'DP', maquina: 'dpessoal-pc', etiqueta: 'MA-3Y4Z5A6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'TLM', maquina: 'tlm4-pc', etiqueta: 'MA-9Z0A1B2-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'WMS', maquina: 'wms-pc', etiqueta: 'MA-1B2C3D4E-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'LOG', maquina: 'log-pc', etiqueta: 'MA-9S0T1U2-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'REC', maquina: 'recep-pc', etiqueta: 'MA-5A6B7C8-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'ROT', maquina: 'roteirizador-pc', etiqueta: 'MA-1X2Y3Z4-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'TI', maquina: 'ts-server', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'COM', maquina: 'comp-pc', etiqueta: 'MA-9K0L1M2-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'DIR', maquina: 'jessica-pc', etiqueta: 'MA-7B8C9D0-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'DP', maquina: 'rh-pc', etiqueta: 'MA-9V0W1X2-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'FAT', maquina: 'fiscal-pc', etiqueta: 'MA-9D0E1F2-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'FIN', maquina: 'monitorcam-pc', etiqueta: 'MA-5S6T7U8-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'FAT', maquina: 'entnf-pc', etiqueta: 'MA-7J8K9L0-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'FIN', maquina: 'alm-pc', etiqueta: 'MA-7F8G9H0-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'DIR', maquina: 'auditoria-pc', etiqueta: 'MA-5D6E7F8-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'FIN', maquina: 'acerto-pc', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'FIN', maquina: 'acerto2-pc', etiqueta: 'MA-1P2Q3R4-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'FIN', maquina: 'cpagar-pc', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'FIN', maquina: 'fin02-pc', etiqueta: 'MA-3J4K5L6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'SPCOM', maquina: 'spven-pc', etiqueta: 'MA-1A2B3C4-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'CX', maquina: 'cxmultpel-pc', etiqueta: 'MA-9O0P1Q2-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'TI', maquina: 'SRV Domain', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+    { setor: 'TI', maquina: 'SRVTS', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' }];
+    const machinesWithId = initialData.map((machine, index) => ({
+      ...machine,
+      id: index + 1,
+      // Se não houver proximaManutencao, defina o status como pendente.
+      // Isso é importante para máquinas recém-adicionadas que precisam de um primeiro agendamento.
+      status: machine.dataRealizacao
+        ? 'concluido'
+        : machine.proximaManutencao
+        ? new Date(machine.proximaManutencao) < new Date(today)
+          ? 'pendente'
+          : 'agendado'
+        : 'pendente', // Se não tem data de realização e nem proximaManutencao, é pendente por padrão
+    }));
+    setMachines(machinesWithId);
+  }, []);
+
+  const filteredEquipamentos = machines.filter((m) => {
+    const matchSearch =
+      m.maquina.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      m.etiqueta.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchSector = !selectedSector || m.setor === selectedSector;
+    return matchSearch && matchSector;
+  });
+
+  const agendadas = machines.filter(
+    (m) =>
+      !m.dataRealizacao &&
+      m.proximaManutencao &&
+      new Date(m.proximaManutencao) >= new Date(today)
+  ).sort((a, b) => a.proximaManutencao.localeCompare(b.proximaManutencao)); // Ordena por data
+
+  const pendentes = machines.filter(
+    (m) =>
+      !m.dataRealizacao &&
+      m.proximaManutencao &&
+      new Date(m.proximaManutencao) < new Date(today)
+  ).sort((a, b) => a.proximaManutencao.localeCompare(b.proximaManutencao)); // Ordena por data
+
+  const realizadas = machines.filter((m) => m.dataRealizacao)
+    .sort((a, b) => b.dataRealizacao.localeCompare(a.dataRealizacao)); // Ordena pelas mais recentes
+
+
+  const sectors = [...new Set(machines.map((m) => m.setor))].sort();
+
+  const equipamentosCount = filteredEquipamentos.length;
+  const agendadasCount = agendadas.length;
+  const pendentesCount = pendentes.length;
+  const realizadasCount = realizadas.length;
+
+  const handleEdit = (machine: Machine) => {
+    setEditingMachine(machine);
+    setShowMachineForm(true); // Usa showMachineForm
+  };
+
+  const handleDelete = (id: number) => {
+    if (confirm('Tem certeza que deseja excluir este equipamento?')) {
+      setMachines((prev) => prev.filter((m) => m.id !== id));
+    }
+  };
+
+  const handleSave = (formData: Machine) => {
+    if (editingMachine) {
+      setMachines((prev) =>
+        prev.map((m) => (m.id === editingMachine.id ? { ...m, ...formData } : m))
+      );
+    } else {
+      // Para novas máquinas, defina um status inicial se proximaManutencao não for fornecida
+      const newMachine = {
+        ...formData,
+        id: Math.max(...machines.map((m) => m.id), 0) + 1, // Garante que o ID comece do 1 se o array estiver vazio
+        // Se a próxima manutenção não for preenchida, ela será inicialmente pendente
+        status: formData.proximaManutencao ? new Date(formData.proximaManutencao) >= new Date(today) ? 'agendado' : 'pendente' : 'pendente',
+      };
+      setMachines((prev) => [...prev, newMachine]);
+    }
+    setShowMachineForm(false); // Usa showMachineForm
+    setEditingMachine(null);
+  };
+
+  const handleDateRealizacaoChange = (id: number, newCompletionDate: string) => {
+    setMachines((prevMachines) => {
+        let updatedMachines = prevMachines;
+        const completedMachine = prevMachines.find(m => m.id === id);
+
+        if (completedMachine) {
+            // 1. Atualizar a máquina atual: definir a data de realização e status para 'concluido'
+            updatedMachines = prevMachines.map((machine) => {
+                if (machine.id === id) {
+                    return {
+                        ...machine,
+                        dataRealizacao: newCompletionDate,
+                        status: 'concluido',
+                    };
+                }
+                return machine;
+            });
+
+            // 2. Se uma data de realização foi realmente inserida, criar uma nova entrada para o próximo ciclo
+            // Cria um novo registro para a próxima manutenção (90 dias após a realização)
+            if (newCompletionDate) {
+                const completedDateObj = new Date(newCompletionDate);
+                completedDateObj.setDate(completedDateObj.getDate() + 90); // Adiciona 90 dias
+
+                const nextMaintenanceDate = completedDateObj.toISOString().split('T')[0];
+
+                const newMachineId = Math.max(...prevMachines.map((m) => m.id), 0) + 1;
+
+                const newCycleMachine: Machine = {
+                    ...completedMachine,
+                    id: newMachineId,
+                    proximaManutencao: nextMaintenanceDate,
+                    dataRealizacao: '', // Limpa a data de realização para o novo agendamento
+                    status: new Date(nextMaintenanceDate) < new Date(today) ? 'pendente' : 'agendado',
+                };
+                updatedMachines = [...updatedMachines, newCycleMachine];
+            }
+        }
+        return updatedMachines;
+    });
+    setEditingDateId(null); // Sai do modo de edição após salvar
+  };
+
+  const startEditingDate = (id: number, currentValue: string) => {
+    setEditingDateId(id);
+    setCurrentEditingDateValue(currentValue);
+  };
+
+  // NOVO: Função para salvar um novo agendamento
+  const handleNewAppointmentSave = (machineId: number, appointmentDate: string) => {
+    setMachines((prevMachines) => {
+        return prevMachines.map((m) => {
+            if (m.id === machineId) {
+                // Atualiza a máquina existente com a nova data de agendamento e status
+                return {
+                    ...m,
+                    proximaManutencao: appointmentDate,
+                    status: new Date(appointmentDate) < new Date(today) ? 'pendente' : 'agendado',
+                };
+            }
+            return m;
+        });
+    });
+    setShowNewAppointmentForm(false); // Fecha o formulário de agendamento
+  };
+
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <div className="container mx-auto px-4 py-8">
+        <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <div className="bg-blue-600 p-3 rounded-xl">
+                <Settings className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-800">
+                  Controle de Manutenção
+                </h1>
+                <p className="text-gray-600">Visualização por Status</p>
+              </div>
+            </div>
+            {/* Renderização condicional dos botões */}
+            {tab === 'equipamentos' && (
+              <button
+                onClick={() => {
+                  setEditingMachine(null);
+                  setShowMachineForm(true); // Abre formulário de máquina
+                }}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl flex items-center gap-2"
+              >
+                <Plus className="w-5 h-5" />
+                Nova Máquina
+              </button>
+            )}
+
+            {tab === 'agendadas' && (
+              <button
+                onClick={() => setShowNewAppointmentForm(true)} // Abre formulário de novo agendamento
+                className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-xl flex items-center gap-2"
+              >
+                <Calendar className="w-5 h-5" />
+                Novo Agendamento
+              </button>
+            )}
+          </div>
+
+          {/* Tabs: Agora passando as contagens e a classe de cor ativa */}
+          <div className="flex gap-4 mb-8">
+            <TabButton label="Equipamentos" value="equipamentos" current={tab} setTab={setTab} count={equipamentosCount} activeColorClass="bg-blue-600" />
+            <TabButton label="Agendadas" value="agendadas" current={tab} setTab={setTab} count={agendadasCount} activeColorClass="bg-purple-600" />
+            <TabButton label="Pendentes" value="pendentes" current={tab} setTab={setTab} count={pendentesCount} activeColorClass="bg-orange-600" />
+            <TabButton label="Realizadas" value="realizadas" current={tab} setTab={setTab} count={realizadasCount} activeColorClass="bg-green-600" />
+          </div>
+
+          {/* Filtros apenas para Equipamentos */}
+          {tab === 'equipamentos' && (
+            <div className="flex flex-col md:flex-row gap-4 mb-8">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Buscar por máquina ou etiqueta..."
+                  className="w-full pl-10 pr-4 py-3 border rounded-xl"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <select
+                className="px-4 py-3 border rounded-xl"
+                value={selectedSector}
+                onChange={(e) => setSelectedSector(e.target.value)}
+              >
+                <option value="">Todos os setores</option>
+                {sectors.map((sector) => (
+                  <option key={sector} value={sector}>
+                    {sector}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Tabelas por tipo */}
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="bg-gray-100 text-left">
+                  {tab === 'equipamentos' && (
+                    <>
+                      <th className="p-2">Setor</th>
+                      <th className="p-2">Máquina</th>
+                      <th className="p-2">Etiqueta</th>
+                      <th className="p-2 text-right">Ações</th>
+                    </>
+                  )}
+                  {tab === 'agendadas' && (
+                    <>
+                      <th className="p-2">Data Agendamento</th>
+                      <th className="p-2">Máquina</th>
+                      <th className="p-2">Data Realização</th>
+                    </>
+                  )}
+                  {tab === 'pendentes' && (
+                    <>
+                      <th className="p-2">Data Agendamento</th>
+                      <th className="p-2">Máquina</th>
+                      <th className="p-2">Data Realização</th>
+                    </>
+                  )}
+                  {tab === 'realizadas' && (
+                    <>
+                      <th className="p-2">Data Agendamento</th>
+                      <th className="p-2">Data Realização</th>
+                      <th className="p-2">Máquina</th>
+                      <th className="p-2">Status</th>
+                    </>
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {(tab === 'equipamentos' ? filteredEquipamentos :
+                  tab === 'agendadas' ? agendadas :
+                  tab === 'pendentes' ? pendentes :
+                  realizadas
+                ).map((m) => (
+                  <tr key={m.id} className="border-b hover:bg-gray-50">
+                    {tab === 'equipamentos' && (
+                      <>
+                        <td className="p-2">{m.setor}</td>
+                        <td className="p-2">{m.maquina}</td>
+                        <td className="p-2">{m.etiqueta}</td>
+                        <td className="p-2 text-right space-x-2">
+                          <button onClick={() => handleEdit(m)} className="text-blue-600 hover:underline">Editar</button>
+                          <button onClick={() => handleDelete(m.id)} className="text-red-600 hover:underline">Excluir</button>
+                        </td>
+                      </>
+                    )}
+                    {tab === 'agendadas' && (
+                      <>
+                        <td className="p-2">{m.proximaManutencao}</td>
+                        <td className="p-2">{m.maquina}</td>
+                        <td className="p-2">
+                          {editingDateId === m.id ? (
+                            <input
+                              type="date"
+                              value={currentEditingDateValue}
+                              onChange={(e) => setCurrentEditingDateValue(e.target.value)}
+                              onBlur={(e) => {
+                                handleDateRealizacaoChange(m.id, e.target.value);
+                                setEditingDateId(null);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleDateRealizacaoChange(m.id, e.target.value);
+                                  setEditingDateId(null);
+                                }
+                              }}
+                              autoFocus
+                              className="w-full p-1 border rounded-md text-sm"
+                            />
+                          ) : (
+                            <span
+                              onClick={() => startEditingDate(m.id, m.dataRealizacao)}
+                              className="cursor-pointer hover:bg-gray-100 p-1 rounded-md block"
+                            >
+                              {m.dataRealizacao || '—'}
+                            </span>
+                          )}
+                        </td>
+                      </>
+                    )}
+                    {tab === 'pendentes' && (
+                      <>
+                        <td className="p-2">{m.proximaManutencao}</td>
+                        <td className="p-2">{m.maquina}</td>
+                        <td className="p-2">
+                          {editingDateId === m.id ? (
+                            <input
+                              type="date"
+                              value={currentEditingDateValue}
+                              onChange={(e) => setCurrentEditingDateValue(e.target.value)}
+                              onBlur={(e) => {
+                                handleDateRealizacaoChange(m.id, e.target.value);
+                                setEditingDateId(null);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleDateRealizacaoChange(m.id, e.target.value);
+                                  setEditingDateId(null);
+                                }
+                              }}
+                              autoFocus
+                              className="w-full p-1 border rounded-md text-sm"
+                            />
+                          ) : (
+                            <span
+                              onClick={() => startEditingDate(m.id, m.dataRealizacao)}
+                              className="cursor-pointer hover:bg-gray-100 p-1 rounded-md block"
+                            >
+                              {m.dataRealizacao || '—'}
+                            </span>
+                          )}
+                        </td>
+                      </>
+                    )}
+                    {tab === 'realizadas' && (
+                      <>
+                        <td className="p-2">{m.proximaManutencao || '—'}</td>
+                        <td className="p-2">{m.dataRealizacao}</td>
+                        <td className="p-2">{m.maquina}</td>
+                        <td className="p-2">
+                          {m.proximaManutencao && m.dataRealizacao && new Date(m.dataRealizacao) > new Date(m.proximaManutencao)
+                            ? 'Com Atraso'
+                            : 'Em Dia'}
+                        </td>
+                      </>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Renderiza MachineForm se showMachineForm for verdadeiro */}
+          {showMachineForm && (
+            <MachineForm
+              machine={editingMachine}
+              onSave={handleSave}
+              onCancel={() => {
+                setShowMachineForm(false);
+                setEditingMachine(null);
+              }}
+              sectors={sectors}
+            />
+          )}
+
+          {/* Renderiza AppointmentForm se showNewAppointmentForm for verdadeiro */}
+          {showNewAppointmentForm && (
+            <AppointmentForm
+              machines={machines}
+              onSave={handleNewAppointmentSave}
+              onCancel={() => setShowNewAppointmentForm(false)}
+              today={today}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Exporta o componente principal para ser usado em index.tsx ou main.tsx
+export default MaintenanceApp;
