@@ -4,9 +4,9 @@ import { Calendar, Settings, Search, Plus, CheckCircle, AlertCircle, Clock } fro
 // --- 1. DEFINIÇÕES DE TIPOS E INTERFACES ---
 interface TabButtonProps {
   label: string;
-  value: 'equipamentos' | 'agendadas' | 'pendentes' | 'realizadas'; // Tipo ajustado
+  value: 'equipamentos' | 'agendadas' | 'pendentes' | 'realizadas';
   current: string;
-  setTab: (value: 'equipamentos' | 'agendadas' | 'pendentes' | 'realizadas') => void; // Tipo ajustado
+  setTab: (value: 'equipamentos' | 'agendadas' | 'pendentes' | 'realizadas') => void;
   count: number;
   activeColorClass: string;
 }
@@ -217,7 +217,7 @@ const AppointmentForm = ({
                         <label className="block text-sm font-medium mb-1">Selecionar Máquina</label>
                         <select
                             value={selectedMachineId}
-                            onChange={(e) => setSelectedMachineId(Number(e.target.value))}
+                            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedMachineId(Number(e.target.value))} // Tipo explícito
                             className="w-full p-2 border rounded-lg"
                         >
                             <option value="">Selecione uma máquina</option>
@@ -233,7 +233,7 @@ const AppointmentForm = ({
                         <input
                             type="date"
                             value={appointmentDate}
-                            onChange={(e) => setAppointmentDate(e.target.value)}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAppointmentDate(e.target.value)} // Tipo explícito
                             className="w-full p-2 border rounded-lg"
                         />
                     </div>
@@ -325,17 +325,22 @@ const MaintenanceApp = () => {
     { setor: 'TI', maquina: 'SRV Domain', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' },
     { setor: 'TI', maquina: 'SRVTS', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' }];
     
-    const machinesWithId = initialData.map((machine, index) => ({
-      ...machine,
-      id: index + 1,
-      status: machine.dataRealizacao
+    // Explicitamente tipar machinesWithId como Machine[]
+    const machinesWithId: Machine[] = initialData.map((machine, index) => {
+      const status: 'pendente' | 'agendado' | 'concluido' = machine.dataRealizacao
         ? 'concluido'
         : machine.proximaManutencao
         ? new Date(machine.proximaManutencao) < new Date(today)
           ? 'pendente'
           : 'agendado'
-        : 'pendente',
-    }));
+        : 'pendente';
+
+      return {
+        ...machine,
+        id: index + 1,
+        status: status,
+      };
+    });
     setMachines(machinesWithId);
   }, []);
 
@@ -383,15 +388,19 @@ const MaintenanceApp = () => {
   };
 
   const handleSave = (formData: Machine) => {
+    const calculatedStatus: 'pendente' | 'agendado' | 'concluido' = formData.proximaManutencao
+        ? new Date(formData.proximaManutencao) >= new Date(today) ? 'agendado' : 'pendente'
+        : 'pendente';
+
     if (editingMachine) {
       setMachines((prev) =>
-        prev.map((m) => (m.id === editingMachine.id ? { ...m, ...formData } : m))
+        prev.map((m) => (m.id === editingMachine.id ? { ...m, ...formData, status: calculatedStatus } : m))
       );
     } else {
-      const newMachine = {
+      const newMachine: Machine = { // Explicitamente tipar newMachine
         ...formData,
         id: Math.max(...machines.map((m) => m.id), 0) + 1,
-        status: formData.proximaManutencao ? new Date(formData.proximaManutencao) >= new Date(today) ? 'agendado' : 'pendente' : 'pendente',
+        status: calculatedStatus,
       };
       setMachines((prev) => [...prev, newMachine]);
     }
@@ -597,7 +606,7 @@ const MaintenanceApp = () => {
                             <input
                               type="date"
                               value={currentEditingDateValue}
-                              onChange={(e) => setCurrentEditingDateValue(e.target.value)}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)} // Tipo explícito
                               onBlur={(e) => {
                                 handleDateRealizacaoChange(m.id, e.target.value);
                                 setEditingDateId(null);
@@ -631,7 +640,7 @@ const MaintenanceApp = () => {
                             <input
                               type="date"
                               value={currentEditingDateValue}
-                              onChange={(e) => setCurrentEditingDateValue(e.target.value)}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)} // Tipo explícito
                               onBlur={(e) => {
                                 handleDateRealizacaoChange(m.id, e.target.value);
                                 setEditingDateId(null);
