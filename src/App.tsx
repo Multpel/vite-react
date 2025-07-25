@@ -72,6 +72,7 @@ const MachineForm = ({
     }
   );
 
+  // CORRIGIDO: Removido 'React.' de ChangeEvent
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -217,7 +218,7 @@ const AppointmentForm = ({
                         <label className="block text-sm font-medium mb-1">Selecionar Máquina</label>
                         <select
                             value={selectedMachineId}
-                            onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedMachineId(Number(e.target.value))} // Tipo explícito
+                            onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedMachineId(Number(e.target.value))} // CORRIGIDO: Usando ChangeEvent
                             className="w-full p-2 border rounded-lg"
                         >
                             <option value="">Selecione uma máquina</option>
@@ -233,7 +234,7 @@ const AppointmentForm = ({
                         <input
                             type="date"
                             value={appointmentDate}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) => setAppointmentDate(e.target.value)} // Tipo explícito
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => setAppointmentDate(e.target.value)} // CORRIGIDO: Usando ChangeEvent
                             className="w-full p-2 border rounded-lg"
                         />
                     </div>
@@ -324,7 +325,7 @@ const MaintenanceApp = () => {
     { setor: 'CX', maquina: 'cxmultpel-pc', etiqueta: 'MA-9O0P1Q2-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
     { setor: 'TI', maquina: 'SRV Domain', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' },
     { setor: 'TI', maquina: 'SRVTS', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' }];
-    
+
     // Explicitamente tipar machinesWithId como Machine[]
     const machinesWithId: Machine[] = initialData.map((machine, index) => {
       const status: 'pendente' | 'agendado' | 'concluido' = machine.dataRealizacao
@@ -531,7 +532,7 @@ const MaintenanceApp = () => {
               <select
                 className="px-4 py-3 border rounded-xl"
                 value={selectedSector}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setSelectedSector(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedSector(e.target.value)} // Corrigido: Usando ChangeEvent e HTMLSelectElement
               >
                 <option value="">Todos os setores</option>
                 {sectors.map((sector) => (
@@ -606,11 +607,13 @@ const MaintenanceApp = () => {
                             <input
                               type="date"
                               value={currentEditingDateValue}
-                              onChange={(e: ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)} // Tipo explícito
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)} // CORRIGIDO: Usando ChangeEvent
+                              // CORRIGIDO: Removido 'React.' de FocusEvent
                               onBlur={(e: FocusEvent<HTMLInputElement>) => {
                                 handleDateRealizacaoChange(m.id, e.target.value);
                                 setEditingDateId(null);
                               }}
+                              // CORRIGIDO: Removido 'React.' de KeyboardEvent
                               onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
                                 if (e.key === 'Enter') {
                                   handleDateRealizacaoChange(m.id, e.target.value);
@@ -640,11 +643,13 @@ const MaintenanceApp = () => {
                             <input
                               type="date"
                               value={currentEditingDateValue}
-                              onChange={(e: ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)} // Tipo explícito
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)} // CORRIGIDO: Usando ChangeEvent
+                              // CORRIGIDO: Removido 'React.' de FocusEvent
                               onBlur={(e: FocusEvent<HTMLInputElement>) => {
                                 handleDateRealizacaoChange(m.id, e.target.value);
                                 setEditingDateId(null);
                               }}
+                              // CORRIGIDO: Removido 'React.' de KeyboardEvent
                               onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
                                 if (e.key === 'Enter') {
                                   handleDateRealizacaoChange(m.id, e.target.value);
