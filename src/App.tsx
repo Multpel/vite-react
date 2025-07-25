@@ -627,12 +627,12 @@ const MaintenanceApp = () => {
                             <input
                               type="date"
                               value={currentEditingDateValue}
-                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)} // Adicionado tipo explícito aqui
-                              onBlur={(e) => {
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)}
+                              onBlur={(e: React.FocusEvent<HTMLInputElement>) => { // Tipo explícito adicionado aqui
                                 handleDateRealizacaoChange(m.id, e.target.value);
                                 setEditingDateId(null);
                               }}
-                              onKeyDown={(e) => {
+                              onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { // Tipo explícito adicionado aqui
                                 if (e.key === 'Enter') {
                                   handleDateRealizacaoChange(m.id, e.target.value);
                                   setEditingDateId(null);
@@ -661,12 +661,12 @@ const MaintenanceApp = () => {
                             <input
                               type="date"
                               value={currentEditingDateValue}
-                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)} // Adicionado tipo explícito aqui
-                              onBlur={(e) => {
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)}
+                              onBlur={(e: React.FocusEvent<HTMLInputElement>) => { // Tipo explícito adicionado aqui
                                 handleDateRealizacaoChange(m.id, e.target.value);
                                 setEditingDateId(null);
                               }}
-                              onKeyDown={(e) => {
+                              onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { // Tipo explícito adicionado aqui
                                 if (e.key === 'Enter') {
                                   handleDateRealizacaoChange(m.id, e.target.value);
                                   setEditingDateId(null);
