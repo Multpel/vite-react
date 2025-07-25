@@ -72,7 +72,7 @@ const MachineForm = ({
     }
   );
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -607,11 +607,11 @@ const MaintenanceApp = () => {
                               type="date"
                               value={currentEditingDateValue}
                               onChange={(e: ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)} // Tipo explícito
-                              onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
+                              onBlur={(e: FocusEvent<HTMLInputElement>) => {
                                 handleDateRealizacaoChange(m.id, e.target.value);
                                 setEditingDateId(null);
                               }}
-                              onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                              onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
                                 if (e.key === 'Enter') {
                                   handleDateRealizacaoChange(m.id, e.target.value);
                                   setEditingDateId(null);
@@ -641,11 +641,11 @@ const MaintenanceApp = () => {
                               type="date"
                               value={currentEditingDateValue}
                               onChange={(e: ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)} // Tipo explícito
-                              onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
+                              onBlur={(e: FocusEvent<HTMLInputElement>) => {
                                 handleDateRealizacaoChange(m.id, e.target.value);
                                 setEditingDateId(null);
                               }}
-                              onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                              onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
                                 if (e.key === 'Enter') {
                                   handleDateRealizacaoChange(m.id, e.target.value);
                                   setEditingDateId(null);
