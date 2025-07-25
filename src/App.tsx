@@ -217,7 +217,7 @@ const AppointmentForm = ({
                         <label className="block text-sm font-medium mb-1">Selecionar Máquina</label>
                         <select
                             value={selectedMachineId}
-                            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedMachineId(Number(e.target.value))} // Tipo explícito
+                            onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedMachineId(Number(e.target.value))} // Tipo explícito
                             className="w-full p-2 border rounded-lg"
                         >
                             <option value="">Selecione uma máquina</option>
@@ -233,7 +233,7 @@ const AppointmentForm = ({
                         <input
                             type="date"
                             value={appointmentDate}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAppointmentDate(e.target.value)} // Tipo explícito
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => setAppointmentDate(e.target.value)} // Tipo explícito
                             className="w-full p-2 border rounded-lg"
                         />
                     </div>
@@ -525,13 +525,13 @@ const MaintenanceApp = () => {
                   placeholder="Buscar por máquina ou etiqueta..."
                   className="w-full pl-10 pr-4 py-3 border rounded-xl"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
                 />
               </div>
               <select
                 className="px-4 py-3 border rounded-xl"
                 value={selectedSector}
-                onChange={(e) => setSelectedSector(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setSelectedSector(e.target.value)}
               >
                 <option value="">Todos os setores</option>
                 {sectors.map((sector) => (
@@ -606,7 +606,7 @@ const MaintenanceApp = () => {
                             <input
                               type="date"
                               value={currentEditingDateValue}
-                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)} // Tipo explícito
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)} // Tipo explícito
                               onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
                                 handleDateRealizacaoChange(m.id, e.target.value);
                                 setEditingDateId(null);
@@ -640,7 +640,7 @@ const MaintenanceApp = () => {
                             <input
                               type="date"
                               value={currentEditingDateValue}
-                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)} // Tipo explícito
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)} // Tipo explícito
                               onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
                                 handleDateRealizacaoChange(m.id, e.target.value);
                                 setEditingDateId(null);
