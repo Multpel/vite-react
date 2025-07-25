@@ -1,4 +1,4 @@
-import React, { useState, useEffect, ChangeEvent } from 'react';
+import React, { useState, useEffect, ChangeEvent, FocusEvent, KeyboardEvent } from 'react';
 import { Calendar, Settings, Search, Plus} from 'lucide-react';
 
 // --- 1. DEFINIÇÕES DE TIPOS E INTERFACES ---
@@ -641,11 +641,11 @@ const MaintenanceApp = () => {
                               type="date"
                               value={currentEditingDateValue}
                               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)} // Tipo explícito
-                              onBlur={(e) => {
+                              onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
                                 handleDateRealizacaoChange(m.id, e.target.value);
                                 setEditingDateId(null);
                               }}
-                              onKeyDown={(e) => {
+                              onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
                                 if (e.key === 'Enter') {
                                   handleDateRealizacaoChange(m.id, e.target.value);
                                   setEditingDateId(null);
