@@ -124,14 +124,15 @@ const MachineForm = ({
               className="w-full p-2 border rounded-lg"
             />
           </div>
+          {/* CAMPO 'Chamado' AGORA É SOMENTE LEITURA E ALIMENTADO PELO AGENDAMENTO */}
           <div>
             <label className="block text-sm font-medium mb-1">Chamado</label>
             <input
               type="text"
               name="chamado"
               value={formData.chamado}
-              onChange={handleChange}
-              className="w-full p-2 border rounded-lg"
+              readOnly={true} // Campo somente leitura
+              className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed" // Estilo para indicar somente leitura
             />
           </div>
           {/* CAMPO 'Próxima Manutenção' AGORA É SOMENTE LEITURA */}
