@@ -1,4 +1,4 @@
-import React, { useState, useEffect, ChangeEvent, FocusEvent, KeyboardEvent } from 'react';
+import { useState, useEffect, ChangeEvent, FocusEvent, KeyboardEvent } from 'react'; // 'React' removido daqui
 import { Calendar, Settings, Search, Plus} from 'lucide-react';
 
 // --- 1. DEFINIÇÕES DE TIPOS E INTERFACES ---
@@ -72,7 +72,6 @@ const MachineForm = ({
     }
   );
 
-  // CORRIGIDO: Removido 'React.' de ChangeEvent
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -218,7 +217,7 @@ const AppointmentForm = ({
                         <label className="block text-sm font-medium mb-1">Selecionar Máquina</label>
                         <select
                             value={selectedMachineId}
-                            onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedMachineId(Number(e.target.value))} // CORRIGIDO: Usando ChangeEvent
+                            onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedMachineId(Number(e.target.value))}
                             className="w-full p-2 border rounded-lg"
                         >
                             <option value="">Selecione uma máquina</option>
@@ -234,7 +233,7 @@ const AppointmentForm = ({
                         <input
                             type="date"
                             value={appointmentDate}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) => setAppointmentDate(e.target.value)} // CORRIGIDO: Usando ChangeEvent
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => setAppointmentDate(e.target.value)}
                             className="w-full p-2 border rounded-lg"
                         />
                     </div>
@@ -532,7 +531,7 @@ const MaintenanceApp = () => {
               <select
                 className="px-4 py-3 border rounded-xl"
                 value={selectedSector}
-                onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedSector(e.target.value)} // Corrigido: Usando ChangeEvent e HTMLSelectElement
+                onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedSector(e.target.value)}
               >
                 <option value="">Todos os setores</option>
                 {sectors.map((sector) => (
@@ -607,16 +606,14 @@ const MaintenanceApp = () => {
                             <input
                               type="date"
                               value={currentEditingDateValue}
-                              onChange={(e: ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)} // CORRIGIDO: Usando ChangeEvent
-                              // CORRIGIDO: Removido 'React.' de FocusEvent
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)}
                               onBlur={(e: FocusEvent<HTMLInputElement>) => {
-                                handleDateRealizacaoChange(m.id, e.target.value);
+                                handleDateRealizacaoChange(m.id, (e.target as HTMLInputElement).value); // Asserção de tipo aqui
                                 setEditingDateId(null);
                               }}
-                              // CORRIGIDO: Removido 'React.' de KeyboardEvent
                               onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
                                 if (e.key === 'Enter') {
-                                  handleDateRealizacaoChange(m.id, e.target.value);
+                                  handleDateRealizacaoChange(m.id, (e.target as HTMLInputElement).value); // Asserção de tipo aqui
                                   setEditingDateId(null);
                                 }
                               }}
@@ -643,16 +640,14 @@ const MaintenanceApp = () => {
                             <input
                               type="date"
                               value={currentEditingDateValue}
-                              onChange={(e: ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)} // CORRIGIDO: Usando ChangeEvent
-                              // CORRIGIDO: Removido 'React.' de FocusEvent
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)}
                               onBlur={(e: FocusEvent<HTMLInputElement>) => {
-                                handleDateRealizacaoChange(m.id, e.target.value);
+                                handleDateRealizacaoChange(m.id, (e.target as HTMLInputElement).value); // Asserção de tipo aqui
                                 setEditingDateId(null);
                               }}
-                              // CORRIGIDO: Removido 'React.' de KeyboardEvent
                               onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
                                 if (e.key === 'Enter') {
-                                  handleDateRealizacaoChange(m.id, e.target.value);
+                                  handleDateRealizacaoChange(m.id, (e.target as HTMLInputElement).value); // Asserção de tipo aqui
                                   setEditingDateId(null);
                                 }
                               }}
