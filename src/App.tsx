@@ -238,7 +238,7 @@ const AppointmentForm = ({
                         <label className="block text-sm font-medium mb-1">Selecionar Máquina</label>
                         <select
                             value={selectedMachineId}
-                            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedMachineId(Number(e.target.value))} // Tipo explícito
+                            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedMachineId(Number(e.target.value))}
                             className="w-full p-2 border rounded-lg"
                         >
                             <option value="">Selecione uma máquina</option>
@@ -254,7 +254,7 @@ const AppointmentForm = ({
                         <input
                             type="date"
                             value={appointmentDate}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAppointmentDate(e.target.value)} // Tipo explícito
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAppointmentDate(e.target.value)}
                             className="w-full p-2 border rounded-lg"
                         />
                     </div>
@@ -628,13 +628,13 @@ const MaintenanceApp = () => {
                               type="date"
                               value={currentEditingDateValue}
                               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)}
-                              onBlur={(e: React.FocusEvent<HTMLInputElement>) => { // Tipo explícito adicionado aqui
-                                handleDateRealizacaoChange(m.id, e.target.value);
+                              onBlur={(e) => {
+                                handleDateRealizacaoChange(m.id, (e.target as HTMLInputElement).value); // Asserção de tipo aqui
                                 setEditingDateId(null);
                               }}
-                              onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { // Tipo explícito adicionado aqui
+                              onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
-                                  handleDateRealizacaoChange(m.id, e.target.value);
+                                  handleDateRealizacaoChange(m.id, (e.target as HTMLInputElement).value); // Asserção de tipo aqui
                                   setEditingDateId(null);
                                 }
                               }}
@@ -662,13 +662,13 @@ const MaintenanceApp = () => {
                               type="date"
                               value={currentEditingDateValue}
                               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)}
-                              onBlur={(e: React.FocusEvent<HTMLInputElement>) => { // Tipo explícito adicionado aqui
-                                handleDateRealizacaoChange(m.id, e.target.value);
+                              onBlur={(e) => {
+                                handleDateRealizacaoChange(m.id, (e.target as HTMLInputElement).value); // Asserção de tipo aqui
                                 setEditingDateId(null);
                               }}
-                              onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { // Tipo explícito adicionado aqui
+                              onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
-                                  handleDateRealizacaoChange(m.id, e.target.value);
+                                  handleDateRealizacaoChange(m.id, (e.target as HTMLInputElement).value); // Asserção de tipo aqui
                                   setEditingDateId(null);
                                 }
                               }}
