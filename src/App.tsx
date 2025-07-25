@@ -126,13 +126,13 @@ const MachineForm = ({
           </div>
           {/* CAMPO 'Chamado' AGORA É SOMENTE LEITURA E ALIMENTADO PELO AGENDAMENTO */}
           <div>
-            <label className="block text-sm font-medium mb-1">Último Chamado</label> {/* <-- Alterado para 'Último Chamado' */}
+            <label className="block text-sm font-medium mb-1">Último Chamado</label>
             <input
               type="text"
               name="chamado"
               value={formData.chamado}
-              readOnly={true} // Campo somente leitura
-              className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed" // Estilo para indicar somente leitura
+              readOnly={true}
+              className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
             />
           </div>
           {/* CAMPO 'Próxima Manutenção' AGORA É SOMENTE LEITURA */}
@@ -281,7 +281,8 @@ const CompletionForm = ({
   const [chamado, setChamado] = useState(currentChamado);
   const [error, setError] = useState<string | null>(null);
 
-  const today = new Date().toISOString().split('T')[0];
+  // CORREÇÃO: Variável renomeada para evitar conflito com 'today' de MaintenanceApp
+  const currentDateString = new Date().toISOString().split('T')[0];
 
   const handleSubmit = () => {
     setError(null);
@@ -289,7 +290,7 @@ const CompletionForm = ({
       setError('Por favor, informe a Data de Realização.');
       return;
     }
-    if (new Date(dateRealizacao) > new Date(today)) {
+    if (new Date(dateRealizacao) > new Date(currentDateString)) { // Usando a nova variável
         setError('A Data de Realização não pode ser futura.');
         return;
     }
