@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Settings, Search, Plus, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { Calendar, Settings, Search, Plus} from 'lucide-react';
 
 // --- 1. DEFINIÇÕES DE TIPOS E INTERFACES ---
 interface TabButtonProps {
