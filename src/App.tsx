@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Calendar, Settings, Search, Plus } from 'lucide-react';
+import { useState, useEffect, ChangeEvent, FocusEvent, KeyboardEvent } from 'react'; // Re-adicionado tipos de evento para compatibilidade
+import { Calendar, Settings, Search, Plus, CheckCircle, AlertCircle, Clock } from 'lucide-react'; // Re-adicionado algumas importações de ícones que podem ter sido removidas
 
 // --- 1. DEFINIÇÕES DE TIPOS E INTERFACES ---
 interface TabButtonProps {
@@ -16,7 +16,7 @@ type Machine = {
   setor: string;
   maquina: string;
   etiqueta: string;
-  chamado: string;
+  chamado: string; // Agora este campo será atualizado no CompletionForm
   proximaManutencao: string;
   dataRealizacao: string;
   status: 'pendente' | 'agendado' | 'concluido';
@@ -72,7 +72,7 @@ const MachineForm = ({
     }
   );
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -217,7 +217,7 @@ const AppointmentForm = ({
                         <label className="block text-sm font-medium mb-1">Selecionar Máquina</label>
                         <select
                             value={selectedMachineId}
-                            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedMachineId(Number(e.target.value))} // Tipo explícito
+                            onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedMachineId(Number(e.target.value))}
                             className="w-full p-2 border rounded-lg"
                         >
                             <option value="">Selecione uma máquina</option>
@@ -233,7 +233,7 @@ const AppointmentForm = ({
                         <input
                             type="date"
                             value={appointmentDate}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAppointmentDate(e.target.value)} // Tipo explícito
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => setAppointmentDate(e.target.value)}
                             className="w-full p-2 border rounded-lg"
                         />
                     </div>
@@ -262,6 +262,93 @@ const AppointmentForm = ({
     );
 };
 
+// NOVO COMPONENTE: Formulário para Finalizar Manutenção
+const CompletionForm = ({
+  machineId,
+  currentDateRealizacao,
+  currentChamado,
+  onSave,
+  onCancel,
+}: {
+  machineId: number;
+  currentDateRealizacao: string;
+  currentChamado: string;
+  onSave: (machineId: number, dateRealizacao: string, chamado: string) => void;
+  onCancel: () => void;
+}) => {
+  const [dateRealizacao, setDateRealizacao] = useState(currentDateRealizacao);
+  const [chamado, setChamado] = useState(currentChamado);
+  const [error, setError] = useState<string | null>(null);
+
+  const today = new Date().toISOString().split('T')[0];
+
+  const handleSubmit = () => {
+    setError(null);
+    if (!dateRealizacao) {
+      setError('Por favor, informe a Data de Realização.');
+      return;
+    }
+    if (new Date(dateRealizacao) > new Date(today)) {
+        setError('A Data de Realização não pode ser futura.');
+        return;
+    }
+    if (!chamado.trim()) {
+      setError('Por favor, informe o Número do Chamado.');
+      return;
+    }
+    onSave(machineId, dateRealizacao, chamado);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl p-6 w-full max-w-md">
+        <h3 className="text-xl font-bold mb-4">Finalizar Manutenção</h3>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Data de Realização</label>
+            <input
+              type="date"
+              value={dateRealizacao}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setDateRealizacao(e.target.value)}
+              className="w-full p-2 border rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Nº Chamado</label>
+            <input
+              type="text"
+              value={chamado}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setChamado(e.target.value)}
+              className="w-full p-2 border rounded-lg"
+              placeholder="Ex: CH00123"
+            />
+          </div>
+
+          {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+
+          <div className="flex gap-2 pt-4">
+            <button
+              type="button"
+              onClick={handleSubmit}
+              className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700"
+            >
+              Salvar
+            </button>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
 // --- 3. COMPONENTE PRINCIPAL (MaintenanceApp) ---
 const MaintenanceApp = () => {
   const [machines, setMachines] = useState<Machine[]>([]);
@@ -271,17 +358,16 @@ const MaintenanceApp = () => {
   const [editingMachine, setEditingMachine] = useState<Machine | null>(null);
   const [showMachineForm, setShowMachineForm] = useState(false);
   const [showNewAppointmentForm, setShowNewAppointmentForm] = useState(false);
-
-  const [editingDateId, setEditingDateId] = useState<number | null>(null);
-  const [currentEditingDateValue, setCurrentEditingDateValue] = useState<string>('');
+  // Novo estado para controlar o formulário de conclusão
+  const [showCompletionForm, setShowCompletionForm] = useState<Machine | null>(null);
 
   const today = new Date().toISOString().split('T')[0];
 
   // --- Efeito para carregar dados do LocalStorage ou dados iniciais ---
   useEffect(() => {
-    const savedMachines = localStorage.getItem('maintenanceMachines'); //
+    const savedMachines = localStorage.getItem('maintenanceMachines');
     if (savedMachines) {
-      setMachines(JSON.parse(savedMachines)); //
+      setMachines(JSON.parse(savedMachines));
     } else {
       // Dados iniciais (se não houver nada no localStorage)
       const initialData = [
@@ -350,12 +436,12 @@ const MaintenanceApp = () => {
       });
       setMachines(machinesWithId);
     }
-  }, []); //
+  }, []);
 
   // --- Efeito para salvar dados no LocalStorage toda vez que 'machines' muda ---
   useEffect(() => {
-    localStorage.setItem('maintenanceMachines', JSON.stringify(machines)); //
-  }, [machines]); //
+    localStorage.setItem('maintenanceMachines', JSON.stringify(machines));
+  }, [machines]);
 
 
   const filteredEquipamentos = machines.filter((m) => {
@@ -411,7 +497,7 @@ const MaintenanceApp = () => {
         prev.map((m) => (m.id === editingMachine.id ? { ...m, ...formData, status: calculatedStatus } : m))
       );
     } else {
-      const newMachine: Machine = { // Explicitamente tipar newMachine
+      const newMachine: Machine = {
         ...formData,
         id: Math.max(...machines.map((m) => m.id), 0) + 1,
         status: calculatedStatus,
@@ -422,7 +508,13 @@ const MaintenanceApp = () => {
     setEditingMachine(null);
   };
 
-  const handleDateRealizacaoChange = (id: number, newCompletionDate: string) => {
+  // Nova função para iniciar a finalização da manutenção (abre o formulário)
+  const startCompletion = (machine: Machine) => {
+    setShowCompletionForm(machine);
+  };
+
+  // Função ajustada para finalizar a manutenção com data e chamado
+  const handleCompleteMaintenance = (id: number, newDateRealizacao: string, newChamado: string) => {
     setMachines((prevMachines) => {
         let updatedMachines = prevMachines;
         const completedMachine = prevMachines.find(m => m.id === id);
@@ -432,15 +524,16 @@ const MaintenanceApp = () => {
                 if (machine.id === id) {
                     return {
                         ...machine,
-                        dataRealizacao: newCompletionDate,
+                        dataRealizacao: newDateRealizacao, // Atualiza a data de realização
+                        chamado: newChamado, // Atualiza o número do chamado
                         status: 'concluido',
                     };
                 }
                 return machine;
             });
 
-            if (newCompletionDate) {
-                const completedDateObj = new Date(newCompletionDate);
+            if (newDateRealizacao) {
+                const completedDateObj = new Date(newDateRealizacao);
                 completedDateObj.setDate(completedDateObj.getDate() + 90);
 
                 const nextMaintenanceDate = completedDateObj.toISOString().split('T')[0];
@@ -451,7 +544,8 @@ const MaintenanceApp = () => {
                     ...completedMachine,
                     id: newMachineId,
                     proximaManutencao: nextMaintenanceDate,
-                    dataRealizacao: '',
+                    dataRealizacao: '', // Zera para o novo ciclo
+                    chamado: '', // Zera o chamado para o novo ciclo (ajuste se quiser manter)
                     status: new Date(nextMaintenanceDate) < new Date(today) ? 'pendente' : 'agendado',
                 };
                 updatedMachines = [...updatedMachines, newCycleMachine];
@@ -459,12 +553,7 @@ const MaintenanceApp = () => {
         }
         return updatedMachines;
     });
-    setEditingDateId(null);
-  };
-
-  const startEditingDate = (id: number, currentValue: string) => {
-    setEditingDateId(id);
-    setCurrentEditingDateValue(currentValue);
+    setShowCompletionForm(null); // Fecha o formulário
   };
 
   const handleNewAppointmentSave = (machineId: number, appointmentDate: string) => {
@@ -539,13 +628,13 @@ const MaintenanceApp = () => {
                   placeholder="Buscar por máquina ou etiqueta..."
                   className="w-full pl-10 pr-4 py-3 border rounded-xl"
                   value={searchTerm}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
                 />
               </div>
               <select
                 className="px-4 py-3 border rounded-xl"
                 value={selectedSector}
-                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedSector(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedSector(e.target.value)}
               >
                 <option value="">Todos os setores</option>
                 {sectors.map((sector) => (
@@ -616,32 +705,13 @@ const MaintenanceApp = () => {
                         <td className="p-2">{m.proximaManutencao}</td>
                         <td className="p-2">{m.maquina}</td>
                         <td className="p-2">
-                          {editingDateId === m.id ? (
-                            <input
-                              type="date"
-                              value={currentEditingDateValue}
-                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)} // Tipo explícito
-                              onBlur={(e: React.FocusEvent<HTMLInputElement>) => { // Tipo explícito para FocusEvent
-                                handleDateRealizacaoChange(m.id, (e.target as HTMLInputElement).value); // Asserção de tipo aqui
-                                setEditingDateId(null);
-                              }}
-                              onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { // Tipo explícito para KeyboardEvent
-                                if (e.key === 'Enter') {
-                                  handleDateRealizacaoChange(m.id, (e.target as HTMLInputElement).value); // Asserção de tipo aqui
-                                  setEditingDateId(null);
-                                }
-                              }}
-                              autoFocus
-                              className="w-full p-1 border rounded-md text-sm"
-                            />
-                          ) : (
-                            <span
-                              onClick={() => startEditingDate(m.id, m.dataRealizacao)}
-                              className="cursor-pointer hover:bg-gray-100 p-1 rounded-md block"
-                            >
-                              {m.dataRealizacao || '—'}
-                            </span>
-                          )}
+                          {/* Substituído o input inline pelo span que abre o modal */}
+                          <span
+                            onClick={() => startCompletion(m)} // Chama a nova função com a máquina
+                            className="cursor-pointer hover:bg-gray-100 p-1 rounded-md block"
+                          >
+                            {m.dataRealizacao || '—'}
+                          </span>
                         </td>
                       </>
                     )}
@@ -650,32 +720,13 @@ const MaintenanceApp = () => {
                         <td className="p-2">{m.proximaManutencao}</td>
                         <td className="p-2">{m.maquina}</td>
                         <td className="p-2">
-                          {editingDateId === m.id ? (
-                            <input
-                              type="date"
-                              value={currentEditingDateValue}
-                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)} // Tipo explícito
-                              onBlur={(e: React.FocusEvent<HTMLInputElement>) => { // Tipo explícito para FocusEvent
-                                handleDateRealizacaoChange(m.id, (e.target as HTMLInputElement).value); // Asserção de tipo aqui
-                                setEditingDateId(null);
-                              }}
-                              onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { // Tipo explícito para KeyboardEvent
-                                if (e.key === 'Enter') {
-                                  handleDateRealizacaoChange(m.id, (e.target as HTMLInputElement).value); // Asserção de tipo aqui
-                                  setEditingDateId(null);
-                                }
-                              }}
-                              autoFocus
-                              className="w-full p-1 border rounded-md text-sm"
-                            />
-                          ) : (
-                            <span
-                              onClick={() => startEditingDate(m.id, m.dataRealizacao)}
-                              className="cursor-pointer hover:bg-gray-100 p-1 rounded-md block"
-                            >
-                              {m.dataRealizacao || '—'}
-                            </span>
-                          )}
+                          {/* Substituído o input inline pelo span que abre o modal */}
+                          <span
+                            onClick={() => startCompletion(m)} // Chama a nova função com a máquina
+                            className="cursor-pointer hover:bg-gray-100 p-1 rounded-md block"
+                          >
+                            {m.dataRealizacao || '—'}
+                          </span>
                         </td>
                       </>
                     )}
@@ -715,6 +766,17 @@ const MaintenanceApp = () => {
               onSave={handleNewAppointmentSave}
               onCancel={() => setShowNewAppointmentForm(false)}
               today={today}
+            />
+          )}
+
+          {/* Renderização condicional do novo formulário de conclusão */}
+          {showCompletionForm && (
+            <CompletionForm
+              machineId={showCompletionForm.id}
+              currentDateRealizacao={showCompletionForm.dataRealizacao}
+              currentChamado={showCompletionForm.chamado}
+              onSave={handleCompleteMaintenance}
+              onCancel={() => setShowCompletionForm(null)}
             />
           )}
         </div>
