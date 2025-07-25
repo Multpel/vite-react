@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, ChangeEvent } from 'react';
 import { Calendar, Settings, Search, Plus} from 'lucide-react';
 
 // --- 1. DEFINIÇÕES DE TIPOS E INTERFACES ---
