@@ -355,18 +355,16 @@ const EditAppointmentForm = ({
   currentProximaManutencao,
   onSave,
   onCancel,
-  today, // 'today' é uma prop aqui
+  referenceDate, // 'today' é uma prop aqui, renomeada para evitar conflito
 }: {
   machineId: number;
   currentProximaManutencao: string;
   onSave: (machineId: number, newProximaManutencao: string) => void;
   onCancel: () => void;
-  today: string;
+  referenceDate: string; // Renomeado
 }) => {
   const [newProximaManutencao, setNewProximaManutencao] = useState(currentProximaManutencao);
   const [error, setError] = useState<string | null>(null);
-
-  // Removido: const today = new Date().toISOString().split('T')[0]; // ESTA LINHA FOI REMOVIDA
 
   const handleSubmit = () => {
     setError(null);
@@ -374,7 +372,7 @@ const EditAppointmentForm = ({
       setError('Por favor, selecione uma nova Data de Agendamento.');
       return;
     }
-    if (new Date(newProximaManutencao) < new Date(today)) {
+    if (new Date(newProximaManutencao) < new Date(referenceDate)) { // Usando referenceDate
         setError('A nova Data de Agendamento não pode ser no passado.');
         return;
     }
@@ -894,7 +892,7 @@ const MaintenanceApp = () => {
               currentProximaManutencao={showEditAppointmentForm.proximaManutencao}
               onSave={handleEditAppointmentDate}
               onCancel={() => setShowEditAppointmentForm(null)}
-              today={today}
+              referenceDate={today} // Passando today como referenceDate
             />
           )}
         </div>
