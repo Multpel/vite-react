@@ -1,5 +1,5 @@
-import { useState, useEffect, ChangeEvent, FocusEvent, KeyboardEvent } from 'react'; // Re-adicionado tipos de evento para compatibilidade
-import { Calendar, Settings, Search, Plus, CheckCircle, AlertCircle, Clock } from 'lucide-react'; // Re-adicionado algumas importações de ícones que podem ter sido removidas
+import { useState, useEffect, ChangeEvent } from 'react'; // Corrigido: Removido FocusEvent, KeyboardEvent
+import { Calendar, Settings, Search, Plus } from 'lucide-react'; // Corrigido: Removido CheckCircle, AlertCircle, Clock
 
 // --- 1. DEFINIÇÕES DE TIPOS E INTERFACES ---
 interface TabButtonProps {
@@ -16,7 +16,7 @@ type Machine = {
   setor: string;
   maquina: string;
   etiqueta: string;
-  chamado: string; // Agora este campo será atualizado no CompletionForm
+  chamado: string;
   proximaManutencao: string;
   dataRealizacao: string;
   status: 'pendente' | 'agendado' | 'concluido';
@@ -524,8 +524,8 @@ const MaintenanceApp = () => {
                 if (machine.id === id) {
                     return {
                         ...machine,
-                        dataRealizacao: newDateRealizacao, // Atualiza a data de realização
-                        chamado: newChamado, // Atualiza o número do chamado
+                        dataRealizacao: newDateRealizacao,
+                        chamado: newChamado,
                         status: 'concluido',
                     };
                 }
@@ -544,8 +544,8 @@ const MaintenanceApp = () => {
                     ...completedMachine,
                     id: newMachineId,
                     proximaManutencao: nextMaintenanceDate,
-                    dataRealizacao: '', // Zera para o novo ciclo
-                    chamado: '', // Zera o chamado para o novo ciclo (ajuste se quiser manter)
+                    dataRealizacao: '',
+                    chamado: '',
                     status: new Date(nextMaintenanceDate) < new Date(today) ? 'pendente' : 'agendado',
                 };
                 updatedMachines = [...updatedMachines, newCycleMachine];
@@ -553,7 +553,7 @@ const MaintenanceApp = () => {
         }
         return updatedMachines;
     });
-    setShowCompletionForm(null); // Fecha o formulário
+    setShowCompletionForm(null);
   };
 
   const handleNewAppointmentSave = (machineId: number, appointmentDate: string) => {
@@ -703,11 +703,14 @@ const MaintenanceApp = () => {
                     {tab === 'agendadas' && (
                       <>
                         <td className="p-2">{m.proximaManutencao}</td>
-                        <td className="p-2">{m.maquina}</td>
+                        <td className="p-2">
+                            {m.maquina}
+                            {m.chamado && <span className="text-xs text-gray-500 block">Chamado: {m.chamado}</span>} {/* Adiciona a exibição do chamado aqui */}
+                        </td>
                         <td className="p-2">
                           {/* Substituído o input inline pelo span que abre o modal */}
                           <span
-                            onClick={() => startCompletion(m)} // Chama a nova função com a máquina
+                            onClick={() => startCompletion(m)}
                             className="cursor-pointer hover:bg-gray-100 p-1 rounded-md block"
                           >
                             {m.dataRealizacao || '—'}
@@ -718,11 +721,14 @@ const MaintenanceApp = () => {
                     {tab === 'pendentes' && (
                       <>
                         <td className="p-2">{m.proximaManutencao}</td>
-                        <td className="p-2">{m.maquina}</td>
+                        <td className="p-2">
+                            {m.maquina}
+                            {m.chamado && <span className="text-xs text-gray-500 block">Chamado: {m.chamado}</span>} {/* Adiciona a exibição do chamado aqui */}
+                        </td>
                         <td className="p-2">
                           {/* Substituído o input inline pelo span que abre o modal */}
                           <span
-                            onClick={() => startCompletion(m)} // Chama a nova função com a máquina
+                            onClick={() => startCompletion(m)}
                             className="cursor-pointer hover:bg-gray-100 p-1 rounded-md block"
                           >
                             {m.dataRealizacao || '—'}
@@ -734,7 +740,10 @@ const MaintenanceApp = () => {
                       <>
                         <td className="p-2">{m.proximaManutencao || '—'}</td>
                         <td className="p-2">{m.dataRealizacao}</td>
-                        <td className="p-2">{m.maquina}</td>
+                        <td className="p-2">
+                            {m.maquina}
+                            {m.chamado && <span className="text-xs text-gray-500 block">Chamado: {m.chamado}</span>} {/* Adiciona a exibição do chamado aqui */}
+                        </td>
                         <td className="p-2">
                           {m.proximaManutencao && m.dataRealizacao && new Date(m.dataRealizacao) > new Date(m.proximaManutencao)
                             ? 'Com Atraso'
