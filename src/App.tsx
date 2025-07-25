@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Settings, Search, Plus, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { Calendar, Settings, Search, Plus } from 'lucide-react'; // 'CheckCircle', 'AlertCircle', 'Clock' removidos
 
 // --- 1. DEFINIÇÕES DE TIPOS E INTERFACES ---
 interface TabButtonProps {
@@ -627,7 +627,7 @@ const MaintenanceApp = () => {
                             <input
                               type="date"
                               value={currentEditingDateValue}
-                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)} // Tipo explícito
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)} // Adicionado tipo explícito aqui
                               onBlur={(e) => {
                                 handleDateRealizacaoChange(m.id, e.target.value);
                                 setEditingDateId(null);
@@ -661,7 +661,7 @@ const MaintenanceApp = () => {
                             <input
                               type="date"
                               value={currentEditingDateValue}
-                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)} // Tipo explícito
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)} // Adicionado tipo explícito aqui
                               onBlur={(e) => {
                                 handleDateRealizacaoChange(m.id, e.target.value);
                                 setEditingDateId(null);
