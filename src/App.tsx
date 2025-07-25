@@ -1,5 +1,5 @@
-import { useState, useEffect, ChangeEvent } from 'react'; // Corrigido: Removido FocusEvent, KeyboardEvent
-import { Calendar, Settings, Search, Plus } from 'lucide-react'; // Corrigido: Removido CheckCircle, AlertCircle, Clock
+import { useState, useEffect, ChangeEvent } from 'react';
+import { Calendar, Settings, Search, Plus } from 'lucide-react';
 
 // --- 1. DEFINIÇÕES DE TIPOS E INTERFACES ---
 interface TabButtonProps {
@@ -169,7 +169,7 @@ const MachineForm = ({
   );
 };
 
-// NOVO COMPONENTE: Formulário para Novo Agendamento
+// COMPONENTE: Formulário para Novo Agendamento
 const AppointmentForm = ({
     machines,
     onSave,
@@ -262,7 +262,7 @@ const AppointmentForm = ({
     );
 };
 
-// NOVO COMPONENTE: Formulário para Finalizar Manutenção
+// COMPONENTE: Formulário para Finalizar Manutenção
 const CompletionForm = ({
   machineId,
   currentDateRealizacao,
@@ -348,6 +348,75 @@ const CompletionForm = ({
   );
 };
 
+// NOVO COMPONENTE: Formulário para Editar Agendamento
+const EditAppointmentForm = ({
+  machineId,
+  currentProximaManutencao,
+  onSave,
+  onCancel,
+  today,
+}: {
+  machineId: number;
+  currentProximaManutencao: string;
+  onSave: (machineId: number, newProximaManutencao: string) => void;
+  onCancel: () => void;
+  today: string;
+}) => {
+  const [newProximaManutencao, setNewProximaManutencao] = useState(currentProximaManutencao);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = () => {
+    setError(null);
+    if (!newProximaManutencao) {
+      setError('Por favor, selecione uma nova Data de Agendamento.');
+      return;
+    }
+    if (new Date(newProximaManutencao) < new Date(today)) {
+        setError('A nova Data de Agendamento não pode ser no passado.');
+        return;
+    }
+    onSave(machineId, newProximaManutencao);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl p-6 w-full max-w-md">
+        <h3 className="text-xl font-bold mb-4">Alterar Data de Agendamento</h3>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Nova Data de Agendamento</label>
+            <input
+              type="date"
+              value={newProximaManutencao}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setNewProximaManutencao(e.target.value)}
+              className="w-full p-2 border rounded-lg"
+            />
+          </div>
+
+          {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+
+          <div className="flex gap-2 pt-4">
+            <button
+              type="button"
+              onClick={handleSubmit}
+              className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700"
+            >
+              Salvar
+            </button>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 // --- 3. COMPONENTE PRINCIPAL (MaintenanceApp) ---
 const MaintenanceApp = () => {
@@ -358,8 +427,9 @@ const MaintenanceApp = () => {
   const [editingMachine, setEditingMachine] = useState<Machine | null>(null);
   const [showMachineForm, setShowMachineForm] = useState(false);
   const [showNewAppointmentForm, setShowNewAppointmentForm] = useState(false);
-  // Novo estado para controlar o formulário de conclusão
   const [showCompletionForm, setShowCompletionForm] = useState<Machine | null>(null);
+  // NOVO ESTADO: Para controlar o formulário de edição de agendamento
+  const [showEditAppointmentForm, setShowEditAppointmentForm] = useState<Machine | null>(null);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -508,12 +578,12 @@ const MaintenanceApp = () => {
     setEditingMachine(null);
   };
 
-  // Nova função para iniciar a finalização da manutenção (abre o formulário)
+  // Função para iniciar a finalização da manutenção (abre o formulário)
   const startCompletion = (machine: Machine) => {
     setShowCompletionForm(machine);
   };
 
-  // Função ajustada para finalizar a manutenção com data e chamado
+  // Função para finalizar a manutenção com data e chamado
   const handleCompleteMaintenance = (id: number, newDateRealizacao: string, newChamado: string) => {
     setMachines((prevMachines) => {
         let updatedMachines = prevMachines;
@@ -555,6 +625,26 @@ const MaintenanceApp = () => {
     });
     setShowCompletionForm(null);
   };
+
+  // NOVO: Função para salvar a nova data de agendamento
+  const handleEditAppointmentDate = (id: number, newProximaManutencao: string) => {
+    setMachines((prevMachines) => {
+      return prevMachines.map((machine) => {
+        if (machine.id === id) {
+          const newStatus: 'pendente' | 'agendado' | 'concluido' =
+            new Date(newProximaManutencao) < new Date(today) ? 'pendente' : 'agendado';
+          return {
+            ...machine,
+            proximaManutencao: newProximaManutencao,
+            status: newStatus,
+          };
+        }
+        return machine;
+      });
+    });
+    setShowEditAppointmentForm(null); // Fecha o formulário após salvar
+  };
+
 
   const handleNewAppointmentSave = (machineId: number, appointmentDate: string) => {
     setMachines((prevMachines) => {
@@ -702,13 +792,20 @@ const MaintenanceApp = () => {
                     )}
                     {tab === 'agendadas' && (
                       <>
-                        <td className="p-2">{m.proximaManutencao}</td>
                         <td className="p-2">
-                            {m.maquina}
-                            {m.chamado && <span className="text-xs text-gray-500 block">Chamado: {m.chamado}</span>} {/* Adiciona a exibição do chamado aqui */}
+                          {/* Torna a célula clicável para editar a data de agendamento */}
+                          <span
+                            onClick={() => setShowEditAppointmentForm(m)}
+                            className="cursor-pointer hover:bg-gray-100 p-1 rounded-md block"
+                          >
+                            {m.proximaManutencao || '—'}
+                          </span>
                         </td>
                         <td className="p-2">
-                          {/* Substituído o input inline pelo span que abre o modal */}
+                            {m.maquina}
+                            {m.chamado && <span className="text-xs text-gray-500 block">Chamado: {m.chamado}</span>}
+                        </td>
+                        <td className="p-2">
                           <span
                             onClick={() => startCompletion(m)}
                             className="cursor-pointer hover:bg-gray-100 p-1 rounded-md block"
@@ -723,10 +820,9 @@ const MaintenanceApp = () => {
                         <td className="p-2">{m.proximaManutencao}</td>
                         <td className="p-2">
                             {m.maquina}
-                            {m.chamado && <span className="text-xs text-gray-500 block">Chamado: {m.chamado}</span>} {/* Adiciona a exibição do chamado aqui */}
+                            {m.chamado && <span className="text-xs text-gray-500 block">Chamado: {m.chamado}</span>}
                         </td>
                         <td className="p-2">
-                          {/* Substituído o input inline pelo span que abre o modal */}
                           <span
                             onClick={() => startCompletion(m)}
                             className="cursor-pointer hover:bg-gray-100 p-1 rounded-md block"
@@ -742,7 +838,7 @@ const MaintenanceApp = () => {
                         <td className="p-2">{m.dataRealizacao}</td>
                         <td className="p-2">
                             {m.maquina}
-                            {m.chamado && <span className="text-xs text-gray-500 block">Chamado: {m.chamado}</span>} {/* Adiciona a exibição do chamado aqui */}
+                            {m.chamado && <span className="text-xs text-gray-500 block">Chamado: {m.chamado}</span>}
                         </td>
                         <td className="p-2">
                           {m.proximaManutencao && m.dataRealizacao && new Date(m.dataRealizacao) > new Date(m.proximaManutencao)
@@ -778,7 +874,6 @@ const MaintenanceApp = () => {
             />
           )}
 
-          {/* Renderização condicional do novo formulário de conclusão */}
           {showCompletionForm && (
             <CompletionForm
               machineId={showCompletionForm.id}
@@ -786,6 +881,17 @@ const MaintenanceApp = () => {
               currentChamado={showCompletionForm.chamado}
               onSave={handleCompleteMaintenance}
               onCancel={() => setShowCompletionForm(null)}
+            />
+          )}
+
+          {/* NOVO: Renderização condicional do formulário de edição de agendamento */}
+          {showEditAppointmentForm && (
+            <EditAppointmentForm
+              machineId={showEditAppointmentForm.id}
+              currentProximaManutencao={showEditAppointmentForm.proximaManutencao}
+              onSave={handleEditAppointmentDate}
+              onCancel={() => setShowEditAppointmentForm(null)}
+              today={today}
             />
           )}
         </div>
