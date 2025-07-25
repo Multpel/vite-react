@@ -126,7 +126,7 @@ const MachineForm = ({
           </div>
           {/* CAMPO 'Chamado' AGORA É SOMENTE LEITURA E ALIMENTADO PELO AGENDAMENTO */}
           <div>
-            <label className="block text-sm font-medium mb-1">Chamado</label>
+            <label className="block text-sm font-medium mb-1">Último Chamado</label> {/* <-- Alterado para 'Último Chamado' */}
             <input
               type="text"
               name="chamado"
@@ -365,6 +365,8 @@ const EditAppointmentForm = ({
 }) => {
   const [newProximaManutencao, setNewProximaManutencao] = useState(currentProximaManutencao);
   const [error, setError] = useState<string | null>(null);
+
+  const today = new Date().toISOString().split('T')[0];
 
   const handleSubmit = () => {
     setError(null);
