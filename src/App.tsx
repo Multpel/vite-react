@@ -355,7 +355,7 @@ const EditAppointmentForm = ({
   currentProximaManutencao,
   onSave,
   onCancel,
-  today,
+  today, // 'today' é uma prop aqui
 }: {
   machineId: number;
   currentProximaManutencao: string;
@@ -366,7 +366,7 @@ const EditAppointmentForm = ({
   const [newProximaManutencao, setNewProximaManutencao] = useState(currentProximaManutencao);
   const [error, setError] = useState<string | null>(null);
 
-  const today = new Date().toISOString().split('T')[0];
+  // Removido: const today = new Date().toISOString().split('T')[0]; // ESTA LINHA FOI REMOVIDA
 
   const handleSubmit = () => {
     setError(null);
