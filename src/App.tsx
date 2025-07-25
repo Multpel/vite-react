@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Calendar, Settings, Search, Plus } from 'lucide-react'; // 'CheckCircle', 'AlertCircle', 'Clock' removidos
+import { useState, useEffect, ChangeEvent } from 'react';
+import { Calendar, Settings, Search, Plus } from 'lucide-react';
 
 // --- 1. DEFINIÇÕES DE TIPOS E INTERFACES ---
 interface TabButtonProps {
@@ -72,37 +72,13 @@ const MachineForm = ({
     }
   );
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = () => {
     onSave(formData);
-  };
-
-  // NOVO: Função para formatar o texto do campo Chamado
-  const getChamadoDisplayValue = () => {
-    let displayValue = '';
-    if (formData.chamado) {
-      displayValue += `Chamado: ${formData.chamado}`;
-    }
-    if (formData.dataRealizacao) {
-      // Converte a data para o formato DD/MM/YYYY
-      const [year, month, day] = formData.dataRealizacao.split('-');
-      const formattedDate = `${day}/${month}/${year}`;
-      displayValue += `${formData.chamado ? ' - ' : ''}Realizado em: ${formattedDate}`;
-    }
-    return displayValue || 'Não informado';
-  };
-
-  // NOVO: Função para formatar o texto do campo Próxima Manutenção
-  const getProximaManutencaoDisplayValue = () => {
-    if (formData.proximaManutencao) {
-      const [year, month, day] = formData.proximaManutencao.split('-');
-      return `${day}/${month}/${year}`;
-    }
-    return 'Não agendado';
   };
 
   return (
@@ -151,23 +127,26 @@ const MachineForm = ({
           <div>
             <label className="block text-sm font-medium mb-1">Chamado</label>
             <input
-              type="text" // Alterado para type="text" para flexibilidade na exibição
+              type="text"
               name="chamado"
-              value={getChamadoDisplayValue()} // Usa a função de formatação
-              readOnly={true} // Campo somente leitura
-              className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
+              value={formData.chamado}
+              onChange={handleChange}
+              className="w-full p-2 border rounded-lg"
             />
           </div>
+          {/* CAMPO 'Próxima Manutenção' AGORA É SOMENTE LEITURA */}
           <div>
             <label className="block text-sm font-medium mb-1">Próxima Manutenção</label>
             <input
-              type="text" // Alterado para type="text" para exibir texto formatado
+              type="date"
               name="proximaManutencao"
-              value={getProximaManutencaoDisplayValue()} // Usa a função de formatação
-              readOnly={true} // Campo somente leitura
+              value={formData.proximaManutencao}
+              onChange={handleChange}
+              readOnly={true}
               className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
             />
           </div>
+          {/* CAMPO 'Data Realização' REMOVIDO */}
           <div className="flex gap-2 pt-4">
             <button
               type="button"
@@ -190,7 +169,7 @@ const MachineForm = ({
   );
 };
 
-// NOVO COMPONENTE: Formulário para Novo Agendamento
+// COMPONENTE: Formulário para Novo Agendamento
 const AppointmentForm = ({
     machines,
     onSave,
@@ -238,7 +217,7 @@ const AppointmentForm = ({
                         <label className="block text-sm font-medium mb-1">Selecionar Máquina</label>
                         <select
                             value={selectedMachineId}
-                            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedMachineId(Number(e.target.value))}
+                            onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedMachineId(Number(e.target.value))}
                             className="w-full p-2 border rounded-lg"
                         >
                             <option value="">Selecione uma máquina</option>
@@ -254,7 +233,7 @@ const AppointmentForm = ({
                         <input
                             type="date"
                             value={appointmentDate}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAppointmentDate(e.target.value)}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => setAppointmentDate(e.target.value)}
                             className="w-full p-2 border rounded-lg"
                         />
                     </div>
@@ -283,6 +262,162 @@ const AppointmentForm = ({
     );
 };
 
+// COMPONENTE: Formulário para Finalizar Manutenção
+const CompletionForm = ({
+  machineId,
+  currentDateRealizacao,
+  currentChamado,
+  onSave,
+  onCancel,
+}: {
+  machineId: number;
+  currentDateRealizacao: string;
+  currentChamado: string;
+  onSave: (machineId: number, dateRealizacao: string, chamado: string) => void;
+  onCancel: () => void;
+}) => {
+  const [dateRealizacao, setDateRealizacao] = useState(currentDateRealizacao);
+  const [chamado, setChamado] = useState(currentChamado);
+  const [error, setError] = useState<string | null>(null);
+
+  const today = new Date().toISOString().split('T')[0];
+
+  const handleSubmit = () => {
+    setError(null);
+    if (!dateRealizacao) {
+      setError('Por favor, informe a Data de Realização.');
+      return;
+    }
+    if (new Date(dateRealizacao) > new Date(today)) {
+        setError('A Data de Realização não pode ser futura.');
+        return;
+    }
+    if (!chamado.trim()) {
+      setError('Por favor, informe o Número do Chamado.');
+      return;
+    }
+    onSave(machineId, dateRealizacao, chamado);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl p-6 w-full max-w-md">
+        <h3 className="text-xl font-bold mb-4">Finalizar Manutenção</h3>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Data de Realização</label>
+            <input
+              type="date"
+              value={dateRealizacao}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setDateRealizacao(e.target.value)}
+              className="w-full p-2 border rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Nº Chamado</label>
+            <input
+              type="text"
+              value={chamado}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setChamado(e.target.value)}
+              className="w-full p-2 border rounded-lg"
+              placeholder="Ex: CH00123"
+            />
+          </div>
+
+          {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+
+          <div className="flex gap-2 pt-4">
+            <button
+              type="button"
+              onClick={handleSubmit}
+              className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700"
+            >
+              Salvar
+            </button>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// NOVO COMPONENTE: Formulário para Editar Agendamento
+const EditAppointmentForm = ({
+  machineId,
+  currentProximaManutencao,
+  onSave,
+  onCancel,
+  today,
+}: {
+  machineId: number;
+  currentProximaManutencao: string;
+  onSave: (machineId: number, newProximaManutencao: string) => void;
+  onCancel: () => void;
+  today: string;
+}) => {
+  const [newProximaManutencao, setNewProximaManutencao] = useState(currentProximaManutencao);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = () => {
+    setError(null);
+    if (!newProximaManutencao) {
+      setError('Por favor, selecione uma nova Data de Agendamento.');
+      return;
+    }
+    if (new Date(newProximaManutencao) < new Date(today)) {
+        setError('A nova Data de Agendamento não pode ser no passado.');
+        return;
+    }
+    onSave(machineId, newProximaManutencao);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl p-6 w-full max-w-md">
+        <h3 className="text-xl font-bold mb-4">Alterar Data de Agendamento</h3>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Nova Data de Agendamento</label>
+            <input
+              type="date"
+              value={newProximaManutencao}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setNewProximaManutencao(e.target.value)}
+              className="w-full p-2 border rounded-lg"
+            />
+          </div>
+
+          {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+
+          <div className="flex gap-2 pt-4">
+            <button
+              type="button"
+              onClick={handleSubmit}
+              className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700"
+            >
+              Salvar
+            </button>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
 // --- 3. COMPONENTE PRINCIPAL (MaintenanceApp) ---
 const MaintenanceApp = () => {
   const [machines, setMachines] = useState<Machine[]>([]);
@@ -292,78 +427,92 @@ const MaintenanceApp = () => {
   const [editingMachine, setEditingMachine] = useState<Machine | null>(null);
   const [showMachineForm, setShowMachineForm] = useState(false);
   const [showNewAppointmentForm, setShowNewAppointmentForm] = useState(false);
-
-  const [editingDateId, setEditingDateId] = useState<number | null>(null);
-  const [currentEditingDateValue, setCurrentEditingDateValue] = useState<string>('');
+  const [showCompletionForm, setShowCompletionForm] = useState<Machine | null>(null);
+  // NOVO ESTADO: Para controlar o formulário de edição de agendamento
+  const [showEditAppointmentForm, setShowEditAppointmentForm] = useState<Machine | null>(null);
 
   const today = new Date().toISOString().split('T')[0];
 
+  // --- Efeito para carregar dados do LocalStorage ou dados iniciais ---
   useEffect(() => {
-    const initialData = [{ setor: 'TI', maquina: 'infoti-pc', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'TI', maquina: 'info-pc', etiqueta: 'MA-5L6M7N8-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'DIR', maquina: 'dir-ronildo-pc', etiqueta: 'MA-1E2F3G4-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'DIR', maquina: 'ronilson-pc', etiqueta: 'MA-5H6I7J8-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'BAL', maquina: 'bal1-pc', etiqueta: 'MA-3R4S5T6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'BAL', maquina: 'bal2-pc', etiqueta: 'MA-7U8V9W0-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'BAL', maquina: 'bal3-pc', etiqueta: 'MA-1M2N3O4-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'BAL', maquina: 'bal4-pc', etiqueta: 'MA-5P6Q7R8-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'FIN', maquina: 'cobranca-pc', etiqueta: 'MA-9G0H1L2-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'FAT', maquina: 'fat2-pc', etiqueta: 'MA-3G4H5I6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'LOG', maquina: 'ctrlfrota-pc', etiqueta: 'MA-3V4W5X6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'TLM', maquina: 'tele2-pc', etiqueta: 'MA-1T2U3V4-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'COM', maquina: 'adm-pc', etiqueta: 'MA-3N4O5P6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'TLM', maquina: 'tele3-pc', etiqueta: 'MA-5W6X7Y8-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'TLM', maquina: 'tele5-pc', etiqueta: 'MA-3C4D5E6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'TLM', maquina: 'telemkt1-pc', etiqueta: 'MA-7Q8R9S0-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'LOG', maquina: 'enc-pc', etiqueta: 'MA-7Y8Z9A0-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'DEP', maquina: 'ava-pc', etiqueta: 'MA-3M4N5O6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'FIN', maquina: 'camera-pc', etiqueta: 'MA-3B4C5D6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'DEP', maquina: 'box-pc', etiqueta: 'MA-9J0K1L2-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'DEP', maquina: 'check-pc', etiqueta: 'MA-5F6G7H8I-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'FAT', maquina: 'cadastro-pc', etiqueta: 'MA-7M8N9O0-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'IND', maquina: 'ind-pc', etiqueta: 'MA-7P8Q9R0-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'DP', maquina: 'dpessoal-pc', etiqueta: 'MA-3Y4Z5A6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'TLM', maquina: 'tlm4-pc', etiqueta: 'MA-9Z0A1B2-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'WMS', maquina: 'wms-pc', etiqueta: 'MA-1B2C3D4E-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'LOG', maquina: 'log-pc', etiqueta: 'MA-9S0T1U2-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'REC', maquina: 'recep-pc', etiqueta: 'MA-5A6B7C8-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'ROT', maquina: 'roteirizador-pc', etiqueta: 'MA-1X2Y3Z4-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'TI', maquina: 'ts-server', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'COM', maquina: 'comp-pc', etiqueta: 'MA-9K0L1M2-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'DIR', maquina: 'jessica-pc', etiqueta: 'MA-7B8C9D0-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'DP', maquina: 'rh-pc', etiqueta: 'MA-9V0W1X2-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'FAT', maquina: 'fiscal-pc', etiqueta: 'MA-9D0E1F2-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'FIN', maquina: 'monitorcam-pc', etiqueta: 'MA-5S6T7U8-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'FAT', maquina: 'entnf-pc', etiqueta: 'MA-7J8K9L0-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'FIN', maquina: 'alm-pc', etiqueta: 'MA-7F8G9H0-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'DIR', maquina: 'auditoria-pc', etiqueta: 'MA-5D6E7F8-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'FIN', maquina: 'acerto-pc', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'FIN', maquina: 'acerto2-pc', etiqueta: 'MA-1P2Q3R4-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'FIN', maquina: 'cpagar-pc', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'FIN', maquina: 'fin02-pc', etiqueta: 'MA-3J4K5L6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'SPCOM', maquina: 'spven-pc', etiqueta: 'MA-1A2B3C4-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'CX', maquina: 'cxmultpel-pc', etiqueta: 'MA-9O0P1Q2-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'TI', maquina: 'SRV Domain', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-    { setor: 'TI', maquina: 'SRVTS', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' }];
-    
-    // Explicitamente tipar machinesWithId como Machine[]
-    const machinesWithId: Machine[] = initialData.map((machine, index) => {
-      const status: 'pendente' | 'agendado' | 'concluido' = machine.dataRealizacao
-        ? 'concluido'
-        : machine.proximaManutencao
-        ? new Date(machine.proximaManutencao) < new Date(today)
-          ? 'pendente'
-          : 'agendado'
-        : 'pendente';
+    const savedMachines = localStorage.getItem('maintenanceMachines');
+    if (savedMachines) {
+      setMachines(JSON.parse(savedMachines));
+    } else {
+      // Dados iniciais (se não houver nada no localStorage)
+      const initialData = [
+        { setor: 'TI', maquina: 'infoti-pc', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'TI', maquina: 'info-pc', etiqueta: 'MA-5L6M7N8-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'DIR', maquina: 'dir-ronildo-pc', etiqueta: 'MA-1E2F3G4-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'DIR', maquina: 'ronilson-pc', etiqueta: 'MA-5H6I7J8-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'BAL', maquina: 'bal1-pc', etiqueta: 'MA-3R4S5T6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'BAL', maquina: 'bal2-pc', etiqueta: 'MA-7U8V9W0-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'BAL', maquina: 'bal3-pc', etiqueta: 'MA-1M2N3O4-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'BAL', maquina: 'bal4-pc', etiqueta: 'MA-5P6Q7R8-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'FIN', maquina: 'cobranca-pc', etiqueta: 'MA-9G0H1L2-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'FAT', maquina: 'fat2-pc', etiqueta: 'MA-3G4H5I6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'LOG', maquina: 'ctrlfrota-pc', etiqueta: 'MA-3V4W5X6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'TLM', maquina: 'tele2-pc', etiqueta: 'MA-1T2U3V4-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'COM', maquina: 'adm-pc', etiqueta: 'MA-3N4O5P6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'TLM', maquina: 'tele3-pc', etiqueta: 'MA-5W6X7Y8-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'TLM', maquina: 'tele5-pc', etiqueta: 'MA-3C4D5E6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'TLM', maquina: 'telemkt1-pc', etiqueta: 'MA-7Q8R9S0-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'LOG', maquina: 'enc-pc', etiqueta: 'MA-7Y8Z9A0-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'DEP', maquina: 'ava-pc', etiqueta: 'MA-3M4N5O6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'FIN', maquina: 'camera-pc', etiqueta: 'MA-3B4C5D6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'DEP', maquina: 'box-pc', etiqueta: 'MA-9J0K1L2-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'DEP', maquina: 'check-pc', etiqueta: 'MA-5F6G7H8I-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'FAT', maquina: 'cadastro-pc', etiqueta: 'MA-7M8N9O0-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'IND', maquina: 'ind-pc', etiqueta: 'MA-7P8Q9R0-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'DP', maquina: 'dpessoal-pc', etiqueta: 'MA-3Y4Z5A6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'TLM', maquina: 'tlm4-pc', etiqueta: 'MA-9Z0A1B2-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'WMS', maquina: 'wms-pc', etiqueta: 'MA-1B2C3D4E-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'LOG', maquina: 'log-pc', etiqueta: 'MA-9S0T1U2-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'REC', maquina: 'recep-pc', etiqueta: 'MA-5A6B7C8-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'ROT', maquina: 'roteirizador-pc', etiqueta: 'MA-1X2Y3Z4-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'TI', maquina: 'ts-server', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'COM', maquina: 'comp-pc', etiqueta: 'MA-9K0L1M2-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'DIR', maquina: 'jessica-pc', etiqueta: 'MA-7B8C9D0-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'DP', maquina: 'rh-pc', etiqueta: 'MA-9V0W1X2-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'FAT', maquina: 'fiscal-pc', etiqueta: 'MA-9D0E1F2-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'FIN', maquina: 'monitorcam-pc', etiqueta: 'MA-5S6T7U8-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'FAT', maquina: 'entnf-pc', etiqueta: 'MA-7J8K9L0-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'FIN', maquina: 'alm-pc', etiqueta: 'MA-7F8G9H0-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'DIR', maquina: 'auditoria-pc', etiqueta: 'MA-5D6E7F8-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'FIN', maquina: 'acerto-pc', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'FIN', maquina: 'acerto2-pc', etiqueta: 'MA-1P2Q3R4-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'FIN', maquina: 'cpagar-pc', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'FIN', maquina: 'fin02-pc', etiqueta: 'MA-3J4K5L6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'SPCOM', maquina: 'spven-pc', etiqueta: 'MA-1A2B3C4-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'CX', maquina: 'cxmultpel-pc', etiqueta: 'MA-9O0P1Q2-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'TI', maquina: 'SRV Domain', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' },
+        { setor: 'TI', maquina: 'SRVTS', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' }
+      ];
 
-      return {
-        ...machine,
-        id: index + 1,
-        status: status,
-      };
-    });
-    setMachines(machinesWithId);
+      const machinesWithId: Machine[] = initialData.map((machine, index) => {
+        const status: 'pendente' | 'agendado' | 'concluido' = machine.dataRealizacao
+          ? 'concluido'
+          : machine.proximaManutencao
+          ? new Date(machine.proximaManutencao) < new Date(today)
+            ? 'pendente'
+            : 'agendado'
+          : 'pendente';
+
+        return {
+          ...machine,
+          id: index + 1,
+          status: status,
+        };
+      });
+      setMachines(machinesWithId);
+    }
   }, []);
+
+  // --- Efeito para salvar dados no LocalStorage toda vez que 'machines' muda ---
+  useEffect(() => {
+    localStorage.setItem('maintenanceMachines', JSON.stringify(machines));
+  }, [machines]);
+
 
   const filteredEquipamentos = machines.filter((m) => {
     const matchSearch =
@@ -418,7 +567,7 @@ const MaintenanceApp = () => {
         prev.map((m) => (m.id === editingMachine.id ? { ...m, ...formData, status: calculatedStatus } : m))
       );
     } else {
-      const newMachine: Machine = { // Explicitamente tipar newMachine
+      const newMachine: Machine = {
         ...formData,
         id: Math.max(...machines.map((m) => m.id), 0) + 1,
         status: calculatedStatus,
@@ -429,7 +578,13 @@ const MaintenanceApp = () => {
     setEditingMachine(null);
   };
 
-  const handleDateRealizacaoChange = (id: number, newCompletionDate: string) => {
+  // Função para iniciar a finalização da manutenção (abre o formulário)
+  const startCompletion = (machine: Machine) => {
+    setShowCompletionForm(machine);
+  };
+
+  // Função para finalizar a manutenção com data e chamado
+  const handleCompleteMaintenance = (id: number, newDateRealizacao: string, newChamado: string) => {
     setMachines((prevMachines) => {
         let updatedMachines = prevMachines;
         const completedMachine = prevMachines.find(m => m.id === id);
@@ -439,15 +594,16 @@ const MaintenanceApp = () => {
                 if (machine.id === id) {
                     return {
                         ...machine,
-                        dataRealizacao: newCompletionDate,
+                        dataRealizacao: newDateRealizacao,
+                        chamado: newChamado,
                         status: 'concluido',
                     };
                 }
                 return machine;
             });
 
-            if (newCompletionDate) {
-                const completedDateObj = new Date(newCompletionDate);
+            if (newDateRealizacao) {
+                const completedDateObj = new Date(newDateRealizacao);
                 completedDateObj.setDate(completedDateObj.getDate() + 90);
 
                 const nextMaintenanceDate = completedDateObj.toISOString().split('T')[0];
@@ -459,6 +615,7 @@ const MaintenanceApp = () => {
                     id: newMachineId,
                     proximaManutencao: nextMaintenanceDate,
                     dataRealizacao: '',
+                    chamado: '',
                     status: new Date(nextMaintenanceDate) < new Date(today) ? 'pendente' : 'agendado',
                 };
                 updatedMachines = [...updatedMachines, newCycleMachine];
@@ -466,13 +623,28 @@ const MaintenanceApp = () => {
         }
         return updatedMachines;
     });
-    setEditingDateId(null);
+    setShowCompletionForm(null);
   };
 
-  const startEditingDate = (id: number, currentValue: string) => {
-    setEditingDateId(id);
-    setCurrentEditingDateValue(currentValue);
+  // NOVO: Função para salvar a nova data de agendamento
+  const handleEditAppointmentDate = (id: number, newProximaManutencao: string) => {
+    setMachines((prevMachines) => {
+      return prevMachines.map((machine) => {
+        if (machine.id === id) {
+          const newStatus: 'pendente' | 'agendado' | 'concluido' =
+            new Date(newProximaManutencao) < new Date(today) ? 'pendente' : 'agendado';
+          return {
+            ...machine,
+            proximaManutencao: newProximaManutencao,
+            status: newStatus,
+          };
+        }
+        return machine;
+      });
+    });
+    setShowEditAppointmentForm(null); // Fecha o formulário após salvar
   };
+
 
   const handleNewAppointmentSave = (machineId: number, appointmentDate: string) => {
     setMachines((prevMachines) => {
@@ -546,13 +718,13 @@ const MaintenanceApp = () => {
                   placeholder="Buscar por máquina ou etiqueta..."
                   className="w-full pl-10 pr-4 py-3 border rounded-xl"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
                 />
               </div>
               <select
                 className="px-4 py-3 border rounded-xl"
                 value={selectedSector}
-                onChange={(e) => setSelectedSector(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedSector(e.target.value)}
               >
                 <option value="">Todos os setores</option>
                 {sectors.map((sector) => (
@@ -620,69 +792,43 @@ const MaintenanceApp = () => {
                     )}
                     {tab === 'agendadas' && (
                       <>
-                        <td className="p-2">{m.proximaManutencao}</td>
-                        <td className="p-2">{m.maquina}</td>
                         <td className="p-2">
-                          {editingDateId === m.id ? (
-                            <input
-                              type="date"
-                              value={currentEditingDateValue}
-                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)}
-                              onBlur={(e) => {
-                                handleDateRealizacaoChange(m.id, (e.target as HTMLInputElement).value); // Asserção de tipo aqui
-                                setEditingDateId(null);
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  handleDateRealizacaoChange(m.id, (e.target as HTMLInputElement).value); // Asserção de tipo aqui
-                                  setEditingDateId(null);
-                                }
-                              }}
-                              autoFocus
-                              className="w-full p-1 border rounded-md text-sm"
-                            />
-                          ) : (
-                            <span
-                              onClick={() => startEditingDate(m.id, m.dataRealizacao)}
-                              className="cursor-pointer hover:bg-gray-100 p-1 rounded-md block"
-                            >
-                              {m.dataRealizacao || '—'}
-                            </span>
-                          )}
+                          {/* Torna a célula clicável para editar a data de agendamento */}
+                          <span
+                            onClick={() => setShowEditAppointmentForm(m)}
+                            className="cursor-pointer hover:bg-gray-100 p-1 rounded-md block"
+                          >
+                            {m.proximaManutencao || '—'}
+                          </span>
+                        </td>
+                        <td className="p-2">
+                            {m.maquina}
+                            {m.chamado && <span className="text-xs text-gray-500 block">Chamado: {m.chamado}</span>}
+                        </td>
+                        <td className="p-2">
+                          <span
+                            onClick={() => startCompletion(m)}
+                            className="cursor-pointer hover:bg-gray-100 p-1 rounded-md block"
+                          >
+                            {m.dataRealizacao || '—'}
+                          </span>
                         </td>
                       </>
                     )}
                     {tab === 'pendentes' && (
                       <>
                         <td className="p-2">{m.proximaManutencao}</td>
-                        <td className="p-2">{m.maquina}</td>
                         <td className="p-2">
-                          {editingDateId === m.id ? (
-                            <input
-                              type="date"
-                              value={currentEditingDateValue}
-                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCurrentEditingDateValue(e.target.value)}
-                              onBlur={(e) => {
-                                handleDateRealizacaoChange(m.id, (e.target as HTMLInputElement).value); // Asserção de tipo aqui
-                                setEditingDateId(null);
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  handleDateRealizacaoChange(m.id, (e.target as HTMLInputElement).value); // Asserção de tipo aqui
-                                  setEditingDateId(null);
-                                }
-                              }}
-                              autoFocus
-                              className="w-full p-1 border rounded-md text-sm"
-                            />
-                          ) : (
-                            <span
-                              onClick={() => startEditingDate(m.id, m.dataRealizacao)}
-                              className="cursor-pointer hover:bg-gray-100 p-1 rounded-md block"
-                            >
-                              {m.dataRealizacao || '—'}
-                            </span>
-                          )}
+                            {m.maquina}
+                            {m.chamado && <span className="text-xs text-gray-500 block">Chamado: {m.chamado}</span>}
+                        </td>
+                        <td className="p-2">
+                          <span
+                            onClick={() => startCompletion(m)}
+                            className="cursor-pointer hover:bg-gray-100 p-1 rounded-md block"
+                          >
+                            {m.dataRealizacao || '—'}
+                          </span>
                         </td>
                       </>
                     )}
@@ -690,7 +836,10 @@ const MaintenanceApp = () => {
                       <>
                         <td className="p-2">{m.proximaManutencao || '—'}</td>
                         <td className="p-2">{m.dataRealizacao}</td>
-                        <td className="p-2">{m.maquina}</td>
+                        <td className="p-2">
+                            {m.maquina}
+                            {m.chamado && <span className="text-xs text-gray-500 block">Chamado: {m.chamado}</span>}
+                        </td>
                         <td className="p-2">
                           {m.proximaManutencao && m.dataRealizacao && new Date(m.dataRealizacao) > new Date(m.proximaManutencao)
                             ? 'Com Atraso'
@@ -721,6 +870,27 @@ const MaintenanceApp = () => {
               machines={machines}
               onSave={handleNewAppointmentSave}
               onCancel={() => setShowNewAppointmentForm(false)}
+              today={today}
+            />
+          )}
+
+          {showCompletionForm && (
+            <CompletionForm
+              machineId={showCompletionForm.id}
+              currentDateRealizacao={showCompletionForm.dataRealizacao}
+              currentChamado={showCompletionForm.chamado}
+              onSave={handleCompleteMaintenance}
+              onCancel={() => setShowCompletionForm(null)}
+            />
+          )}
+
+          {/* NOVO: Renderização condicional do formulário de edição de agendamento */}
+          {showEditAppointmentForm && (
+            <EditAppointmentForm
+              machineId={showEditAppointmentForm.id}
+              currentProximaManutencao={showEditAppointmentForm.proximaManutencao}
+              onSave={handleEditAppointmentDate}
+              onCancel={() => setShowEditAppointmentForm(null)}
               today={today}
             />
           )}
