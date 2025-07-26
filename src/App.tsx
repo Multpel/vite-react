@@ -1,5 +1,7 @@
 import { useState, useEffect, ChangeEvent } from 'react';
 import { Calendar, Settings, Search, Plus } from 'lucide-react';
+import { db } from './firebase-config'; 
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 
 // --- 1. DEFINIÇÕES DE TIPOS E INTERFACES ---
 interface TabButtonProps {
@@ -12,7 +14,7 @@ interface TabButtonProps {
 }
 
 type Machine = {
-  id: number;
+  id: string;
   setor: string;
   maquina: string;
   etiqueta: string;
@@ -420,7 +422,6 @@ const EditAppointmentForm = ({
   );
 };
 
-
 // --- 3. COMPONENTE PRINCIPAL (MaintenanceApp) ---
 const MaintenanceApp = () => {
   const [machines, setMachines] = useState<Machine[]>([]);
@@ -437,84 +438,36 @@ const MaintenanceApp = () => {
   const currentDayString = new Date().toISOString().split('T')[0];
 
   // --- Efeito para carregar dados do LocalStorage ou dados iniciais ---
-  useEffect(() => {
-    const savedMachines = localStorage.getItem('maintenanceMachines');
-    if (savedMachines) {
-      setMachines(JSON.parse(savedMachines));
-    } else {
-      // Dados iniciais (se não houver nada no localStorage)
-      const initialData = [
-        { setor: 'TI', maquina: 'infoti-pc', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'TI', maquina: 'info-pc', etiqueta: 'MA-5L6M7N8-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'DIR', maquina: 'dir-ronildo-pc', etiqueta: 'MA-1E2F3G4-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'DIR', maquina: 'ronilson-pc', etiqueta: 'MA-5H6I7J8-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'BAL', maquina: 'bal1-pc', etiqueta: 'MA-3R4S5T6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'BAL', maquina: 'bal2-pc', etiqueta: 'MA-7U8V9W0-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'BAL', maquina: 'bal3-pc', etiqueta: 'MA-1M2N3O4-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'BAL', maquina: 'bal4-pc', etiqueta: 'MA-5P6Q7R8-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'FIN', maquina: 'cobranca-pc', etiqueta: 'MA-9G0H1L2-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'FAT', maquina: 'fat2-pc', etiqueta: 'MA-3G4H5I6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'LOG', maquina: 'ctrlfrota-pc', etiqueta: 'MA-3V4W5X6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'TLM', maquina: 'tele2-pc', etiqueta: 'MA-1T2U3V4-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'COM', maquina: 'adm-pc', etiqueta: 'MA-3N4O5P6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'TLM', maquina: 'tele3-pc', etiqueta: 'MA-5W6X7Y8-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'TLM', maquina: 'tele5-pc', etiqueta: 'MA-3C4D5E6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'TLM', maquina: 'telemkt1-pc', etiqueta: 'MA-7Q8R9S0-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'LOG', maquina: 'enc-pc', etiqueta: 'MA-7Y8Z9A0-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'DEP', maquina: 'ava-pc', etiqueta: 'MA-3M4N5O6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'FIN', maquina: 'camera-pc', etiqueta: 'MA-3B4C5D6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'DEP', maquina: 'box-pc', etiqueta: 'MA-9J0K1L2-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'DEP', maquina: 'check-pc', etiqueta: 'MA-5F6G7H8I-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'FAT', maquina: 'cadastro-pc', etiqueta: 'MA-7M8N9O0-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'IND', maquina: 'ind-pc', etiqueta: 'MA-7P8Q9R0-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'DP', maquina: 'dpessoal-pc', etiqueta: 'MA-3Y4Z5A6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'TLM', maquina: 'tlm4-pc', etiqueta: 'MA-9Z0A1B2-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'WMS', maquina: 'wms-pc', etiqueta: 'MA-1B2C3D4E-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'LOG', maquina: 'log-pc', etiqueta: 'MA-9S0T1U2-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'REC', maquina: 'recep-pc', etiqueta: 'MA-5A6B7C8-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'ROT', maquina: 'roteirizador-pc', etiqueta: 'MA-1X2Y3Z4-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'TI', maquina: 'ts-server', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'COM', maquina: 'comp-pc', etiqueta: 'MA-9K0L1M2-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'DIR', maquina: 'jessica-pc', etiqueta: 'MA-7B8C9D0-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'DP', maquina: 'rh-pc', etiqueta: 'MA-9V0W1X2-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'FAT', maquina: 'fiscal-pc', etiqueta: 'MA-9D0E1F2-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'FIN', maquina: 'monitorcam-pc', etiqueta: 'MA-5S6T7U8-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'FAT', maquina: 'entnf-pc', etiqueta: 'MA-7J8K9L0-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'FIN', maquina: 'alm-pc', etiqueta: 'MA-7F8G9H0-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'DIR', maquina: 'auditoria-pc', etiqueta: 'MA-5D6E7F8-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'FIN', maquina: 'acerto-pc', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'FIN', maquina: 'acerto2-pc', etiqueta: 'MA-1P2Q3R4-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'FIN', maquina: 'cpagar-pc', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'FIN', maquina: 'fin02-pc', etiqueta: 'MA-3J4K5L6-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'SPCOM', maquina: 'spven-pc', etiqueta: 'MA-1A2B3C4-L', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'CX', maquina: 'cxmultpel-pc', etiqueta: 'MA-9O0P1Q2-P', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'TI', maquina: 'SRV Domain', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' },
-        { setor: 'TI', maquina: 'SRVTS', etiqueta: '', chamado: '', proximaManutencao: '', dataRealizacao: '' }
-      ];
+ useEffect(() => {
+    const fetchMachines = async () => {
+      try {
+        const machinesCollection = collection(db, 'machines');
+        const machineSnapshot = await getDocs(machinesCollection);
+        const machinesList = machineSnapshot.docs.map(doc => {
+          const data = doc.data(); // Pega os dados brutos do documento
 
-      const machinesWithId: Machine[] = initialData.map((machine, index) => {
-        const status: 'pendente' | 'agendado' | 'concluido' = machine.dataRealizacao
-          ? 'concluido'
-          : machine.proximaManutencao
-          ? new Date(machine.proximaManutencao) < new Date(currentDayString)
-            ? 'pendente'
-            : 'agendado'
-          : 'pendente';
+          // Lógica de cálculo de status (EXATAMENTE A QUE VOCÊ JÁ TINHA!)
+          const status: 'pendente' | 'agendado' | 'concluido' = data.dataRealizacao
+            ? 'concluido'
+            : data.proximaManutencao
+            ? new Date(data.proximaManutencao) < new Date(currentDayString)
+              ? 'pendente'
+              : 'agendado'
+            : 'pendente';
 
-        return {
-          ...machine,
-          id: index + 1,
-          status: status,
-        };
-      });
-      setMachines(machinesWithId);
-    }
-  }, []);
-
-  // --- Efeito para salvar dados no LocalStorage toda vez que 'machines' muda ---
-  useEffect(() => {
-    localStorage.setItem('maintenanceMachines', JSON.stringify(machines));
-  }, [machines]);
+          return {
+            id: doc.id, // ID do Firestore
+            ...data, // Restante dos dados da máquina
+            status: status, // Status calculado
+          } as Machine; // Força o tipo Machine
+        });
+        setMachines(machinesList);
+      } catch (error) {
+        console.error("Erro ao buscar máquinas do Firestore:", error);
+      }
+    };
+    fetchMachines();
+  }, [currentDayString]); // Adicione currentDayString nas dependências para recalcular se o dia mudar
 
 
   const filteredEquipamentos = machines.filter((m) => {
@@ -554,31 +507,78 @@ const MaintenanceApp = () => {
     setShowMachineForm(true);
   };
 
-  const handleDelete = (id: number) => {
-    if (confirm('Tem certeza que deseja excluir este equipamento?')) {
-      setMachines((prev) => prev.filter((m) => m.id !== id));
+  const handleDelete = async (id: string) => { // A função agora é async e o ID é string
+    if (confirm('Tem certeza que deseja excluir este equipamento?')) { // Mantém a confirmação
+      try {
+        const machineDocRef = doc(db, 'machines', id); // Cria uma referência ao documento no Firestore
+        await deleteDoc(machineDocRef); // Deleta o documento no Firestore
+
+        // Atualiza o estado local APÓS a exclusão bem-sucedida no Firestore
+        setMachines((prev) => prev.filter((machine) => machine.id !== id));
+        console.log("Máquina deletada do Firestore e do estado local com ID:", id);
+      } catch (error) {
+        console.error("Erro ao deletar máquina do Firestore:", error);
+        // Opcional: Adicionar feedback visual para o usuário em caso de erro
+      }
     }
   };
 
-  const handleSave = (formData: Machine) => {
-    const calculatedStatus: 'pendente' | 'agendado' | 'concluido' = formData.proximaManutencao
-        ? new Date(formData.proximaManutencao) >= new Date(currentDayString) ? 'agendado' : 'pendente'
+const handleSave = async (formData: Omit<Machine, 'id'>) => { // Tornamos a função async
+    try {
+      const calculatedStatus: 'pendente' | 'agendado' | 'concluido' = formData.dataRealizacao // Use dataRealizacao para 'concluido'
+        ? 'concluido'
+        : formData.proximaManutencao
+        ? new Date(formData.proximaManutencao) < new Date(currentDayString) // Ajustado para 'pendente' se data passada
+          ? 'pendente'
+          : 'agendado'
         : 'pendente';
 
-    if (editingMachine) {
-      setMachines((prev) =>
-        prev.map((m) => (m.id === editingMachine.id ? { ...m, ...formData, status: calculatedStatus } : m))
-      );
-    } else {
-      const newMachine: Machine = {
-        ...formData,
-        id: Math.max(...machines.map((m) => m.id), 0) + 1,
-        status: calculatedStatus,
-      };
-      setMachines((prev) => [...prev, newMachine]);
+      if (editingMachine) {
+        // Lógica de EDIÇÃO para o Firestore
+        const machineDocRef = doc(db, 'machines', editingMachine.id); // Cria uma referência ao documento Firestore
+
+        // Os dados a serem atualizados no Firestore
+        const dataToUpdate = {
+          ...formData,
+          status: calculatedStatus, // Salva o status calculado no Firestore
+          timestamp: new Date(), // Opcional: atualiza o timestamp
+        };
+
+        await updateDoc(machineDocRef, dataToUpdate); // Atualiza o documento no Firestore
+
+        // Atualiza o estado local APÓS a operação no Firestore
+        setMachines((prev) =>
+          prev.map((m) =>
+            m.id === editingMachine.id ? { ...m, ...formData, status: calculatedStatus } : m
+          )
+        );
+        console.log("Máquina atualizada no Firestore e no estado local!");
+
+      } else {
+        // Lógica de ADICIONAR NOVA MÁQUINA para o Firestore
+        const newMachineData = {
+          ...formData,
+          status: calculatedStatus, // Salva o status calculado no Firestore
+          timestamp: new Date(), // Adicione um timestamp para ordenação
+        };
+
+        // Adiciona um novo documento à coleção 'machines' no Firestore
+        const docRef = await addDoc(collection(db, 'machines'), newMachineData);
+
+        // Adiciona a nova máquina ao estado local com o ID gerado pelo Firestore
+        const newMachineWithId: Machine = {
+          id: docRef.id, // Use o ID gerado pelo Firestore
+          ...newMachineData,
+        };
+        setMachines((prev) => [...prev, newMachineWithId]);
+        console.log("Nova máquina adicionada ao Firestore e ao estado local com ID:", docRef.id);
+      }
+      setShowMachineForm(false);
+      setEditingMachine(null);
+    } catch (error) {
+      console.error("Erro ao salvar máquina no Firestore:", error);
+      // Opcional: Adicionar feedback visual para o usuário em caso de erro
     }
-    setShowMachineForm(false);
-    setEditingMachine(null);
   };
 
   // Função para iniciar a finalização da manutenção (abre o formulário)
@@ -587,82 +587,172 @@ const MaintenanceApp = () => {
   };
 
   // Função para finalizar a manutenção com data e chamado
-  const handleCompleteMaintenance = (id: number, newDateRealizacao: string, newChamado: string) => {
-    setMachines((prevMachines) => {
-        let updatedMachines = prevMachines;
-        const completedMachine = prevMachines.find(m => m.id === id);
+const handleCompleteMaintenance = async ( // Adicione 'async' aqui
+    id: string, // O ID agora é string
+    newDateRealizacao: string,
+    newChamado: string
+  ) => {
+    try {
+      // --- 1. Atualizar a máquina concluída no Firestore ---
+      const machineDocRef = doc(db, 'machines', id); // Referência ao documento da máquina original
+      const dataToUpdate = {
+        dataRealizacao: newDateRealizacao,
+        chamado: newChamado,
+        status: 'concluido',
+        // Opcional: para registrar quando foi concluído ou para ordenação
+        timestampConclusao: new Date(),
+      };
+      await updateDoc(machineDocRef, dataToUpdate); // Atualiza o documento no Firestore
 
-        if (completedMachine) {
-            updatedMachines = prevMachines.map((machine) => {
-                if (machine.id === id) {
-                    return {
-                        ...machine,
-                        dataRealizacao: newDateRealizacao,
-                        chamado: newChamado,
-                        status: 'concluido',
-                    };
-                }
-                return machine;
-            });
+      // --- 2. Preparar e adicionar a nova máquina (próximo ciclo) no Firestore ---
+      const completedMachine = machines.find(m => m.id === id); // Encontra a máquina no estado local para basear a nova
 
-            if (newDateRealizacao) {
-                const completedDateObj = new Date(newDateRealizacao);
-                completedDateObj.setDate(completedDateObj.getDate() + 90);
+      if (completedMachine && newDateRealizacao) {
+        const completedDateObj = new Date(newDateRealizacao);
+        completedDateObj.setDate(completedDateObj.getDate() + 90); // Adiciona 90 dias
 
-                const nextMaintenanceDate = completedDateObj.toISOString().split('T')[0];
+        const nextMaintenanceDate = completedDateObj.toISOString().split('T')[0];
 
-                const newMachineId = Math.max(...prevMachines.map((m) => m.id), 0) + 1;
+        // Calcular status para a NOVA máquina do ciclo
+        const newCycleStatus: 'pendente' | 'agendado' | 'concluido' =
+          new Date(nextMaintenanceDate) < new Date(currentDayString) ? 'pendente' : 'agendado';
 
-                const newCycleMachine: Machine = {
-                    ...completedMachine,
-                    id: newMachineId,
-                    proximaManutencao: nextMaintenanceDate,
-                    dataRealizacao: '',
-                    chamado: '',
-                    status: new Date(nextMaintenanceDate) < new Date(currentDayString) ? 'pendente' : 'agendado',
-                };
-                updatedMachines = [...updatedMachines, newCycleMachine];
-            }
-        }
-        return updatedMachines;
-    });
-    setShowCompletionForm(null);
+        const newCycleMachineData = {
+          setor: completedMachine.setor,
+          maquina: completedMachine.maquina,
+          etiqueta: completedMachine.etiqueta,
+          chamado: '', // O chamado deve ser resetado para o novo ciclo
+          proximaManutencao: nextMaintenanceDate,
+          dataRealizacao: '', // Limpa dataRealizacao para o novo ciclo
+          status: newCycleStatus,
+          timestampCriacaoCiclo: new Date(), // Opcional: para registrar a criação do novo ciclo
+        };
+
+        // Adiciona a nova máquina (próximo ciclo) no Firestore
+        const newDocRef = await addDoc(collection(db, 'machines'), newCycleMachineData);
+
+        // --- 3. Atualizar o estado local 'machines' ---
+        // Primeiro, atualiza a máquina original no estado
+        let updatedMachines = machines.map((machine) => {
+          if (machine.id === id) {
+            return {
+              ...machine,
+              ...dataToUpdate, // Aplica as atualizações feitas no Firestore
+            };
+          }
+          return machine;
+        });
+
+        // Adiciona a nova máquina do ciclo ao estado local
+        const newCycleMachineWithId: Machine = {
+          id: newDocRef.id, // ID gerado pelo Firestore para o novo ciclo
+          ...newCycleMachineData,
+        };
+        updatedMachines = [...updatedMachines, newCycleMachineWithId];
+
+        setMachines(updatedMachines);
+        console.log("Manutenção concluída e novo ciclo criado no Firestore e no estado local. ID original:", id, "Novo ciclo ID:", newDocRef.id);
+
+      } else {
+        // Se a máquina não foi encontrada ou dataRealizacao não foi fornecida
+        console.warn("Máquina não encontrada ou data de realização não fornecida para completar manutenção.");
+      }
+    } catch (error) {
+      console.error("Erro ao finalizar manutenção ou criar novo ciclo no Firestore:", error);
+      // Opcional: Adicionar feedback visual para o usuário em caso de erro
+    } finally {
+      setShowCompletionForm(null); // Fecha o formulário em qualquer caso
+    }
   };
 
   // NOVO: Função para salvar a nova data de agendamento
-  const handleEditAppointmentDate = (id: number, newProximaManutencao: string) => {
-    setMachines((prevMachines) => {
-      return prevMachines.map((machine) => {
-        if (machine.id === id) {
-          const newStatus: 'pendente' | 'agendado' | 'concluido' =
-            new Date(newProximaManutencao) < new Date(currentDayString) ? 'pendente' : 'agendado';
-          return {
-            ...machine,
-            proximaManutencao: newProximaManutencao,
-            status: newStatus,
-          };
-        }
-        return machine;
+  const handleEditAppointmentDate = async ( // Adicione 'async' aqui
+    id: string, // O ID agora é string
+    newProximaManutencao: string
+  ) => {
+    try {
+      const machineDocRef = doc(db, 'machines', id); // Cria uma referência ao documento no Firestore
+
+      // Lógica de cálculo do novo status baseada na newProximaManutencao
+      const newStatus: 'pendente' | 'agendado' | 'concluido' =
+        new Date(newProximaManutencao) < new Date(currentDayString) ? 'pendente' : 'agendado';
+
+      // Dados a serem atualizados no Firestore
+      const dataToUpdate = {
+        proximaManutencao: newProximaManutencao,
+        status: newStatus,
+        // Mantemos 'dataRealizacao' como está, mas se for um reagendamento, geralmente se espera que seja vazia.
+        // Se precisar garantir que é limpa, adicione: dataRealizacao: '',
+        timestampUltimaAtualizacao: new Date(), // Opcional: para registrar a última alteração
+      };
+
+      await updateDoc(machineDocRef, dataToUpdate); // Atualiza o documento no Firestore
+
+      // Atualiza o estado local APÓS a operação no Firestore ser bem-sucedida
+      setMachines((prevMachines) => {
+        return prevMachines.map((machine) => {
+          if (machine.id === id) {
+            return {
+              ...machine,
+              ...dataToUpdate, // Aplica as atualizações feitas no Firestore
+            };
+          }
+          return machine;
+        });
       });
-    });
-    setShowEditAppointmentForm(null); // Fecha o formulário após salvar
+      console.log("Data de agendamento atualizada no Firestore e no estado local. ID:", id);
+    } catch (error) {
+      console.error("Erro ao editar data de agendamento no Firestore:", error);
+      // Opcional: Adicionar feedback visual para o usuário em caso de erro
+    } finally {
+      setShowEditAppointmentForm(null); // Fecha o formulário em qualquer caso
+    }
   };
 
 
-  const handleNewAppointmentSave = (machineId: number, appointmentDate: string) => {
-    setMachines((prevMachines) => {
+  const handleNewAppointmentSave = async ( // Adicione 'async' aqui
+    machineId: string, // O ID agora é string
+    appointmentDate: string
+  ) => {
+    try {
+      const machineDocRef = doc(db, 'machines', machineId); // Cria uma referência ao documento no Firestore
+
+      // Lógica de cálculo do novo status baseada na data do agendamento
+      const newStatus: 'pendente' | 'agendado' | 'concluido' =
+        new Date(appointmentDate) < new Date(currentDayString) ? 'pendente' : 'agendado';
+
+      // Dados a serem atualizados no Firestore
+      const dataToUpdate = {
+        proximaManutencao: appointmentDate,
+        status: newStatus,
+        // É importante decidir se 'dataRealizacao' deve ser limpa aqui.
+        // Se este é um NOVO agendamento para uma máquina que talvez já teve manutenção,
+        // pode ser necessário limpar dataRealizacao para indicar que a próxima está pendente.
+        dataRealizacao: '', // Limpa dataRealizacao ao agendar uma nova manutenção
+        timestampUltimaAtualizacao: new Date(), // Opcional: para registrar a última alteração
+      };
+
+      await updateDoc(machineDocRef, dataToUpdate); // Atualiza o documento no Firestore
+
+      // Atualiza o estado local APÓS a operação no Firestore ser bem-sucedida
+      setMachines((prevMachines) => {
         return prevMachines.map((m) => {
-            if (m.id === machineId) {
-                return {
-                    ...m,
-                    proximaManutencao: appointmentDate,
-                    status: new Date(appointmentDate) < new Date(currentDayString) ? 'pendente' : 'agendado',
-                };
-            }
-            return m;
+          if (m.id === machineId) {
+            return {
+              ...m,
+              ...dataToUpdate, // Aplica as atualizações feitas no Firestore
+            };
+          }
+          return m;
         });
-    });
-    setShowNewAppointmentForm(false);
+      });
+      console.log("Novo agendamento salvo no Firestore e no estado local para ID:", machineId);
+    } catch (error) {
+      console.error("Erro ao salvar novo agendamento no Firestore:", error);
+      // Opcional: Adicionar feedback visual para o usuário em caso de erro
+    } finally {
+      setShowNewAppointmentForm(false); // Fecha o formulário em qualquer caso
+    }
   };
 
   return (
