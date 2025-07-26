@@ -433,7 +433,7 @@ const MaintenanceApp = () => {
   // NOVO ESTADO: Para controlar o formulário de edição de agendamento
   const [showEditAppointmentForm, setShowEditAppointmentForm] = useState<Machine | null>(null);
 
-  const today = new Date().toISOString().split('T')[0];
+  const currentDayString = new Date().toISOString().split('T')[0];
 
   // --- Efeito para carregar dados do LocalStorage ou dados iniciais ---
   useEffect(() => {
@@ -495,7 +495,7 @@ const MaintenanceApp = () => {
         const status: 'pendente' | 'agendado' | 'concluido' = machine.dataRealizacao
           ? 'concluido'
           : machine.proximaManutencao
-          ? new Date(machine.proximaManutencao) < new Date(today)
+          ? new Date(machine.proximaManutencao) < new Date(currentDayString)
             ? 'pendente'
             : 'agendado'
           : 'pendente';
@@ -618,7 +618,7 @@ const MaintenanceApp = () => {
                     proximaManutencao: nextMaintenanceDate,
                     dataRealizacao: '',
                     chamado: '',
-                    status: new Date(nextMaintenanceDate) < new Date(today) ? 'pendente' : 'agendado',
+                    status: new Date(nextMaintenanceDate) < new Date(currentDayString) ? 'pendente' : 'agendado',
                 };
                 updatedMachines = [...updatedMachines, newCycleMachine];
             }
@@ -634,7 +634,7 @@ const MaintenanceApp = () => {
       return prevMachines.map((machine) => {
         if (machine.id === id) {
           const newStatus: 'pendente' | 'agendado' | 'concluido' =
-            new Date(newProximaManutencao) < new Date(today) ? 'pendente' : 'agendado';
+            new Date(newProximaManutencao) < new Date(currentDayString) ? 'pendente' : 'agendado';
           return {
             ...machine,
             proximaManutencao: newProximaManutencao,
@@ -655,7 +655,7 @@ const MaintenanceApp = () => {
                 return {
                     ...m,
                     proximaManutencao: appointmentDate,
-                    status: new Date(appointmentDate) < new Date(today) ? 'pendente' : 'agendado',
+                    status: new Date(appointmentDate) < new Date(currentDayString) ? 'pendente' : 'agendado',
                 };
             }
             return m;
@@ -893,7 +893,7 @@ const MaintenanceApp = () => {
               currentProximaManutencao={showEditAppointmentForm.proximaManutencao}
               onSave={handleEditAppointmentDate}
               onCancel={() => setShowEditAppointmentForm(null)}
-              referenceDate={today} // Passando today como referenceDate
+              referenceDate={currentDayString} // Passando currentDayString como referenceDate
             />
           )}
         </div>
