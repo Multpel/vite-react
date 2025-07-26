@@ -637,7 +637,9 @@ const handleCompleteMaintenance = async ( // Adicione 'async' aqui
           if (machine.id === id) {
             return {
               ...machine,
-              ...dataToUpdate, // Aplica as atualizações feitas no Firestore
+              dataRealizacao: dataToUpdate.dataRealizacao,
+              chamado: dataToUpdate.chamado,
+              status: dataToUpdate.status, // Explicitly assign status
             } as Machine; // Explicitly cast to Machine
           }
           return machine;
