@@ -180,7 +180,7 @@ const AppointmentForm = ({
     today
 }: {
     machines: Machine[];
-    onSave: (machineId: string, appointmentDate: string) => void; // <<< CORRIGIDO: machineId agora é string
+    onSave: (machineId: string, appointmentDate: string) => void | Promise<void>; // Modified to accept Promise<void>
     onCancel: () => void;
     today: string;
 }) => {
@@ -277,7 +277,7 @@ const CompletionForm = ({
   machineId: string; // <<< CORRIGIDO: number para string
   currentDateRealizacao: string;
   currentChamado: string;
-  onSave: (machineId: string, dateRealizacao: string, chamado: string) => void; // <<< CORRIGIDO: machineId agora é string
+  onSave: (machineId: string, dateRealizacao: string, chamado: string) => void | Promise<void>; // Modified to accept Promise<void>
   onCancel: () => void;
 }) => {
   const [dateRealizacao, setDateRealizacao] = useState(currentDateRealizacao);
@@ -363,7 +363,7 @@ const EditAppointmentForm = ({
 }: {
   machineId: string; // <<< CORRIGIDO: number para string
   currentProximaManutencao: string;
-  onSave: (machineId: string, newProximaManutencao: string) => void; // <<< CORRIGIDO: machineId agora é string
+  onSave: (machineId: string, newProximaManutencao: string) => void | Promise<void>; // Modified to accept Promise<void>
   onCancel: () => void;
   referenceDate: string; // Renomeado
 }) => {
@@ -549,7 +549,7 @@ const handleSave = async (formData: Omit<Machine, 'id'>) => { // Tornamos a fun�
         // Atualiza o estado local APÓS a operação no Firestore
         setMachines((prev) =>
           prev.map((m) =>
-            m.id === editingMachine.id ? { ...m, ...formData, status: calculatedStatus } : m
+            m.id === editingMachine.id ? { ...m, ...formData, status: calculatedStatus } as Machine : m // Explicitly cast to Machine
           )
         );
         console.log("Máquina atualizada no Firestore e no estado local!");
@@ -638,7 +638,7 @@ const handleCompleteMaintenance = async ( // Adicione 'async' aqui
             return {
               ...machine,
               ...dataToUpdate, // Aplica as atualizações feitas no Firestore
-            };
+            } as Machine; // Explicitly cast to Machine
           }
           return machine;
         });
@@ -695,7 +695,7 @@ const handleCompleteMaintenance = async ( // Adicione 'async' aqui
             return {
               ...machine,
               ...dataToUpdate, // Aplica as atualizações feitas no Firestore
-            };
+            } as Machine; // Explicitly cast to Machine
           }
           return machine;
         });
@@ -741,7 +741,7 @@ const handleCompleteMaintenance = async ( // Adicione 'async' aqui
             return {
               ...m,
               ...dataToUpdate, // Aplica as atualizações feitas no Firestore
-            };
+            } as Machine; // Explicitly cast to Machine
           }
           return m;
         });
@@ -970,8 +970,8 @@ const handleCompleteMaintenance = async ( // Adicione 'async' aqui
           {showCompletionForm && (
             <CompletionForm
               machineId={showCompletionForm.id}
-              currentDateRealizacao={showCompletionForm.dataRealizacao}
-              currentChamado={showCompletionForm.chamado}
+              currentDateRealizacao={showCompletionForm.dataRealizacao || ''} // Handle undefined
+              currentChamado={showCompletionForm.chamado || ''} // Handle undefined
               onSave={handleCompleteMaintenance}
               onCancel={() => setShowCompletionForm(null)}
             />
@@ -981,7 +981,7 @@ const handleCompleteMaintenance = async ( // Adicione 'async' aqui
           {showEditAppointmentForm && (
             <EditAppointmentForm
               machineId={showEditAppointmentForm.id}
-              currentProximaManutencao={showEditAppointmentForm.proximaManutencao}
+              currentProximaManutencao={showEditAppointmentForm.proximaManutencao || ''} // Handle undefined
               onSave={handleEditAppointmentDate}
               onCancel={() => setShowEditAppointmentForm(null)}
               referenceDate={currentDayString} // Passando currentDayString como referenceDate
