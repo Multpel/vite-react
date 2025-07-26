@@ -180,7 +180,7 @@ const AppointmentForm = ({
     today
 }: {
     machines: Machine[];
-    onSave: (machineId: string, appointmentDate: string) => void | Promise<void>; // Modified to accept Promise<void>
+    onSave: (machineId: string, appointmentDate: string) => void | Promise<void>;
     onCancel: () => void;
     today: string;
 }) => {
@@ -208,7 +208,7 @@ const AppointmentForm = ({
             return;
         }
 
-        onSave(selectedMachineId, appointmentDate); // <<< CORRIGIDO: Removido Number()
+        onSave(selectedMachineId, appointmentDate);
     };
 
     return (
@@ -220,7 +220,7 @@ const AppointmentForm = ({
                         <label className="block text-sm font-medium mb-1">Selecionar Máquina</label>
                         <select
                             value={selectedMachineId}
-                            onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedMachineId(e.target.value)} // <<< CORRIGIDO: Removido Number()
+                            onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedMachineId(e.target.value)}
                             className="w-full p-2 border rounded-lg"
                         >
                             <option value="">Selecione uma máquina</option>
@@ -277,7 +277,7 @@ const CompletionForm = ({
   machineId: string; // <<< CORRIGIDO: number para string
   currentDateRealizacao: string;
   currentChamado: string;
-  onSave: (machineId: string, dateRealizacao: string, chamado: string) => void | Promise<void>; // Modified to accept Promise<void>
+  onSave: (machineId: string, dateRealizacao: string, chamado: string) => void | Promise<void>;
   onCancel: () => void;
 }) => {
   const [dateRealizacao, setDateRealizacao] = useState(currentDateRealizacao);
@@ -363,7 +363,7 @@ const EditAppointmentForm = ({
 }: {
   machineId: string; // <<< CORRIGIDO: number para string
   currentProximaManutencao: string;
-  onSave: (machineId: string, newProximaManutencao: string) => void | Promise<void>; // Modified to accept Promise<void>
+  onSave: (machineId: string, newProximaManutencao: string) => void | Promise<void>;
   onCancel: () => void;
   referenceDate: string; // Renomeado
 }) => {
@@ -587,33 +587,36 @@ const handleSave = async (formData: Omit<Machine, 'id'>) => { // Tornamos a fun�
   };
 
   // Função para finalizar a manutenção com data e chamado
-const handleCompleteMaintenance = async ( // Adicione 'async' aqui
-    id: string, // O ID agora é string
+const handleCompleteMaintenance = async (
+    id: string,
     newDateRealizacao: string,
     newChamado: string
   ) => {
     try {
       // --- 1. Atualizar a máquina concluída no Firestore ---
-      const machineDocRef = doc(db, 'machines', id); // Referência ao documento da máquina original
-      const dataToUpdate = {
+      const machineDocRef = doc(db, 'machines', id);
+      const dataToUpdate: { // Explicitly type dataToUpdate for clarity
+        dataRealizacao: string;
+        chamado: string;
+        status: 'concluido';
+        timestampConclusao: Date;
+      } = {
         dataRealizacao: newDateRealizacao,
         chamado: newChamado,
-        status: 'concluido' as const, // <<< CORRIGIDO: Adicionado 'as const' para garantir o literal
-        // Opcional: para registrar quando foi concluído ou para ordenação
+        status: 'concluido',
         timestampConclusao: new Date(),
       };
-      await updateDoc(machineDocRef, dataToUpdate); // Atualiza o documento no Firestore
+      await updateDoc(machineDocRef, dataToUpdate);
 
       // --- 2. Preparar e adicionar a nova máquina (próximo ciclo) no Firestore ---
-      const completedMachine = machines.find(m => m.id === id); // Encontra a máquina no estado local para basear a nova
+      const completedMachine = machines.find(m => m.id === id);
 
       if (completedMachine && newDateRealizacao) {
         const completedDateObj = new Date(newDateRealizacao);
-        completedDateObj.setDate(completedDateObj.getDate() + 90); // Adiciona 90 dias
+        completedDateObj.setDate(completedDateObj.getDate() + 90);
 
         const nextMaintenanceDate = completedDateObj.toISOString().split('T')[0];
 
-        // Calcular status para a NOVA máquina do ciclo
         const newCycleStatus: 'pendente' | 'agendado' | 'concluido' =
           new Date(nextMaintenanceDate) < new Date(currentDayString) ? 'pendente' : 'agendado';
 
@@ -621,33 +624,30 @@ const handleCompleteMaintenance = async ( // Adicione 'async' aqui
           setor: completedMachine.setor,
           maquina: completedMachine.maquina,
           etiqueta: completedMachine.etiqueta,
-          chamado: '', // O chamado deve ser resetado para o novo ciclo
+          chamado: '',
           proximaManutencao: nextMaintenanceDate,
-          dataRealizacao: '', // Limpa dataRealizacao para o novo ciclo
+          dataRealizacao: '',
           status: newCycleStatus,
-          timestampCriacaoCiclo: new Date(), // Opcional: para registrar a criação do novo ciclo
+          timestampCriacaoCiclo: new Date(),
         };
 
-        // Adiciona a nova máquina (próximo ciclo) no Firestore
         const newDocRef = await addDoc(collection(db, 'machines'), newCycleMachineData);
 
         // --- 3. Atualizar o estado local 'machines' ---
-        // Primeiro, atualiza a máquina original no estado
         let updatedMachines = machines.map((machine) => {
           if (machine.id === id) {
             return {
               ...machine,
-              dataRealizacao: dataToUpdate.dataRealizacao,
-              chamado: dataToUpdate.chamado,
-              status: dataToUpdate.status, // Explicitly assign status
-            } as Machine; // Explicitly cast to Machine
+              dataRealizacao: newDateRealizacao, // Directly use the new value
+              chamado: newChamado, // Directly use the new value
+              status: 'concluido', // Explicitly assign the literal type here
+            } as Machine;
           }
           return machine;
         });
 
-        // Adiciona a nova máquina do ciclo ao estado local
         const newCycleMachineWithId: Machine = {
-          id: newDocRef.id, // ID gerado pelo Firestore para o novo ciclo
+          id: newDocRef.id,
           ...newCycleMachineData,
         };
         updatedMachines = [...updatedMachines, newCycleMachineWithId];
@@ -656,48 +656,41 @@ const handleCompleteMaintenance = async ( // Adicione 'async' aqui
         console.log("Manutenção concluída e novo ciclo criado no Firestore e no estado local. ID original:", id, "Novo ciclo ID:", newDocRef.id);
 
       } else {
-        // Se a máquina não foi encontrada ou dataRealizacao não foi fornecida
         console.warn("Máquina não encontrada ou data de realização não fornecida para completar manutenção.");
       }
     } catch (error) {
       console.error("Erro ao finalizar manutenção ou criar novo ciclo no Firestore:", error);
-      // Opcional: Adicionar feedback visual para o usuário em caso de erro
     } finally {
-      setShowCompletionForm(null); // Fecha o formulário em qualquer caso
+      setShowCompletionForm(null);
     }
   };
 
   // NOVO: Função para salvar a nova data de agendamento
-  const handleEditAppointmentDate = async ( // Adicione 'async' aqui
-    id: string, // O ID agora é string
+  const handleEditAppointmentDate = async (
+    id: string,
     newProximaManutencao: string
   ) => {
     try {
-      const machineDocRef = doc(db, 'machines', id); // Cria uma referência ao documento no Firestore
+      const machineDocRef = doc(db, 'machines', id);
 
-      // Lógica de cálculo do novo status baseada na newProximaManutencao
       const newStatus: 'pendente' | 'agendado' | 'concluido' =
         new Date(newProximaManutencao) < new Date(currentDayString) ? 'pendente' : 'agendado';
 
-      // Dados a serem atualizados no Firestore
       const dataToUpdate = {
         proximaManutencao: newProximaManutencao,
         status: newStatus,
-        // Mantemos 'dataRealizacao' como está, mas se for um reagendamento, geralmente se espera que seja vazia.
-        // Se precisar garantir que é limpa, adicione: dataRealizacao: '',
-        timestampUltimaAtualizacao: new Date(), // Opcional: para registrar a última alteração
+        timestampUltimaAtualizacao: new Date(),
       };
 
-      await updateDoc(machineDocRef, dataToUpdate); // Atualiza o documento no Firestore
+      await updateDoc(machineDocRef, dataToUpdate);
 
-      // Atualiza o estado local APÓS a operação no Firestore ser bem-sucedida
       setMachines((prevMachines) => {
         return prevMachines.map((machine) => {
           if (machine.id === id) {
             return {
               ...machine,
-              ...dataToUpdate, // Aplica as atualizações feitas no Firestore
-            } as Machine; // Explicitly cast to Machine
+              ...dataToUpdate,
+            } as Machine;
           }
           return machine;
         });
@@ -705,45 +698,38 @@ const handleCompleteMaintenance = async ( // Adicione 'async' aqui
       console.log("Data de agendamento atualizada no Firestore e no estado local. ID:", id);
     } catch (error) {
       console.error("Erro ao editar data de agendamento no Firestore:", error);
-      // Opcional: Adicionar feedback visual para o usuário em caso de erro
     } finally {
-      setShowEditAppointmentForm(null); // Fecha o formulário em qualquer caso
+      setShowEditAppointmentForm(null);
     }
   };
 
 
-  const handleNewAppointmentSave = async ( // Adicione 'async' aqui
-    machineId: string, // O ID agora é string
+  const handleNewAppointmentSave = async (
+    machineId: string,
     appointmentDate: string
   ) => {
     try {
-      const machineDocRef = doc(db, 'machines', machineId); // Cria uma referência ao documento no Firestore
+      const machineDocRef = doc(db, 'machines', machineId);
 
-      // Lógica de cálculo do novo status baseada na data do agendamento
       const newStatus: 'pendente' | 'agendado' | 'concluido' =
         new Date(appointmentDate) < new Date(currentDayString) ? 'pendente' : 'agendado';
 
-      // Dados a serem atualizados no Firestore
       const dataToUpdate = {
         proximaManutencao: appointmentDate,
         status: newStatus,
-        // É importante decidir se 'dataRealizacao' deve ser limpa aqui.
-        // Se este é um NOVO agendamento para uma máquina que talvez já teve manutenção,
-        // pode ser necessário limpar dataRealizacao para indicar que a próxima está pendente.
-        dataRealizacao: '', // Limpa dataRealizacao ao agendar uma nova manutenção
-        timestampUltimaAtualizacao: new Date(), // Opcional: para registrar a última alteração
+        dataRealizacao: '',
+        timestampUltimaAtualizacao: new Date(),
       };
 
-      await updateDoc(machineDocRef, dataToUpdate); // Atualiza o documento no Firestore
+      await updateDoc(machineDocRef, dataToUpdate);
 
-      // Atualiza o estado local APÓS a operação no Firestore ser bem-sucedida
       setMachines((prevMachines) => {
         return prevMachines.map((m) => {
           if (m.id === machineId) {
             return {
               ...m,
-              ...dataToUpdate, // Aplica as atualizações feitas no Firestore
-            } as Machine; // Explicitly cast to Machine
+              ...dataToUpdate,
+            } as Machine;
           }
           return m;
         });
@@ -751,9 +737,8 @@ const handleCompleteMaintenance = async ( // Adicione 'async' aqui
       console.log("Novo agendamento salvo no Firestore e no estado local para ID:", machineId);
     } catch (error) {
       console.error("Erro ao salvar novo agendamento no Firestore:", error);
-      // Opcional: Adicionar feedback visual para o usuário em caso de erro
     } finally {
-      setShowNewAppointmentForm(false); // Fecha o formulário em qualquer caso
+      setShowNewAppointmentForm(false);
     }
   };
 
@@ -888,7 +873,6 @@ const handleCompleteMaintenance = async ( // Adicione 'async' aqui
                     {tab === 'agendadas' && (
                       <>
                         <td className="p-2">
-                          {/* Torna a célula clicável para editar a data de agendamento */}
                           <span
                             onClick={() => setShowEditAppointmentForm(m)}
                             className="cursor-pointer hover:bg-gray-100 p-1 rounded-md block"
@@ -972,8 +956,8 @@ const handleCompleteMaintenance = async ( // Adicione 'async' aqui
           {showCompletionForm && (
             <CompletionForm
               machineId={showCompletionForm.id}
-              currentDateRealizacao={showCompletionForm.dataRealizacao || ''} // Handle undefined
-              currentChamado={showCompletionForm.chamado || ''} // Handle undefined
+              currentDateRealizacao={showCompletionForm.dataRealizacao || ''}
+              currentChamado={showCompletionForm.chamado || ''}
               onSave={handleCompleteMaintenance}
               onCancel={() => setShowCompletionForm(null)}
             />
@@ -983,10 +967,10 @@ const handleCompleteMaintenance = async ( // Adicione 'async' aqui
           {showEditAppointmentForm && (
             <EditAppointmentForm
               machineId={showEditAppointmentForm.id}
-              currentProximaManutencao={showEditAppointmentForm.proximaManutencao || ''} // Handle undefined
+              currentProximaManutencao={showEditAppointmentForm.proximaManutencao || ''}
               onSave={handleEditAppointmentDate}
               onCancel={() => setShowEditAppointmentForm(null)}
-              referenceDate={currentDayString} // Passando currentDayString como referenceDate
+              referenceDate={currentDayString}
             />
           )}
         </div>
