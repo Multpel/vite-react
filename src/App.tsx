@@ -1,6 +1,6 @@
 import { useState, useEffect, ChangeEvent } from 'react';
 import { Calendar, Settings, Search, Plus } from 'lucide-react';
-import { db } from './firebase-config'; 
+import { db } from './firebase-config';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 
 // --- 1. DEFINIÇÕES DE TIPOS E INTERFACES ---
@@ -14,13 +14,13 @@ interface TabButtonProps {
 }
 
 type Machine = {
-  id: string;
+  id: string; // <<< CORRIGIDO: DEVE SER STRING!
   setor: string;
   maquina: string;
   etiqueta: string;
   chamado: string;
-  proximaManutencao: string;
-  dataRealizacao: string;
+  proximaManutencao?: string; // <<< DEVE SER OPCIONAL
+  dataRealizacao?: string;    // <<< DEVE SER OPCIONAL
   status: 'pendente' | 'agendado' | 'concluido';
 };
 
@@ -63,7 +63,7 @@ const MachineForm = ({
 }) => {
   const [formData, setFormData] = useState<Machine>(
     machine || {
-      id: 0,
+      id: '', // <<< CORRIGIDO: Era 0, agora string vazia
       setor: '',
       maquina: '',
       etiqueta: '',
@@ -143,7 +143,7 @@ const MachineForm = ({
             <input
               type="date"
               name="proximaManutencao"
-              value={formData.proximaManutencao}
+              value={formData.proximaManutencao || ''} // Handle undefined
               onChange={handleChange}
               readOnly={true}
               className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
@@ -180,11 +180,11 @@ const AppointmentForm = ({
     today
 }: {
     machines: Machine[];
-    onSave: (machineId: number, appointmentDate: string) => void;
+    onSave: (machineId: string, appointmentDate: string) => void; // <<< CORRIGIDO: machineId agora é string
     onCancel: () => void;
     today: string;
 }) => {
-    const [selectedMachineId, setSelectedMachineId] = useState<number | ''>('');
+    const [selectedMachineId, setSelectedMachineId] = useState<string | ''>(''); // <<< CORRIGIDO: number para string
     const [appointmentDate, setAppointmentDate] = useState<string>('');
     const [error, setError] = useState<string | null>(null);
 
@@ -208,7 +208,7 @@ const AppointmentForm = ({
             return;
         }
 
-        onSave(Number(selectedMachineId), appointmentDate);
+        onSave(selectedMachineId, appointmentDate); // <<< CORRIGIDO: Removido Number()
     };
 
     return (
@@ -220,7 +220,7 @@ const AppointmentForm = ({
                         <label className="block text-sm font-medium mb-1">Selecionar Máquina</label>
                         <select
                             value={selectedMachineId}
-                            onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedMachineId(Number(e.target.value))}
+                            onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedMachineId(e.target.value)} // <<< CORRIGIDO: Removido Number()
                             className="w-full p-2 border rounded-lg"
                         >
                             <option value="">Selecione uma máquina</option>
@@ -274,10 +274,10 @@ const CompletionForm = ({
   onSave,
   onCancel,
 }: {
-  machineId: number;
+  machineId: string; // <<< CORRIGIDO: number para string
   currentDateRealizacao: string;
   currentChamado: string;
-  onSave: (machineId: number, dateRealizacao: string, chamado: string) => void;
+  onSave: (machineId: string, dateRealizacao: string, chamado: string) => void; // <<< CORRIGIDO: machineId agora é string
   onCancel: () => void;
 }) => {
   const [dateRealizacao, setDateRealizacao] = useState(currentDateRealizacao);
@@ -361,9 +361,9 @@ const EditAppointmentForm = ({
   onCancel,
   referenceDate, // 'today' é uma prop aqui, renomeada para evitar conflito
 }: {
-  machineId: number;
+  machineId: string; // <<< CORRIGIDO: number para string
   currentProximaManutencao: string;
-  onSave: (machineId: number, newProximaManutencao: string) => void;
+  onSave: (machineId: string, newProximaManutencao: string) => void; // <<< CORRIGIDO: machineId agora é string
   onCancel: () => void;
   referenceDate: string; // Renomeado
 }) => {
@@ -483,17 +483,17 @@ const MaintenanceApp = () => {
       !m.dataRealizacao &&
       m.proximaManutencao &&
       new Date(m.proximaManutencao) >= new Date(currentDayString)
-  ).sort((a, b) => a.proximaManutencao.localeCompare(b.proximaManutencao));
+  ).sort((a, b) => (a.proximaManutencao || '').localeCompare(b.proximaManutencao || '')); // Handle undefined
 
   const pendentes = machines.filter(
     (m) =>
       !m.dataRealizacao &&
       m.proximaManutencao &&
       new Date(m.proximaManutencao) < new Date(currentDayString)
-  ).sort((a, b) => a.proximaManutencao.localeCompare(b.proximaManutencao));
+  ).sort((a, b) => (a.proximaManutencao || '').localeCompare(b.proximaManutencao || '')); // Handle undefined
 
   const realizadas = machines.filter((m) => m.dataRealizacao)
-    .sort((a, b) => b.dataRealizacao.localeCompare(a.dataRealizacao));
+    .sort((a, b) => (b.dataRealizacao || '').localeCompare(a.dataRealizacao || '')); // Handle undefined
 
   const sectors = [...new Set(machines.map((m) => m.setor))].sort();
 
@@ -525,10 +525,10 @@ const MaintenanceApp = () => {
 
 const handleSave = async (formData: Omit<Machine, 'id'>) => { // Tornamos a função async
     try {
-      const calculatedStatus: 'pendente' | 'agendado' | 'concluido' = formData.dataRealizacao // Use dataRealizacao para 'concluido'
+      const calculatedStatus: 'pendente' | 'agendado' | 'concluido' = formData.dataRealizacao
         ? 'concluido'
         : formData.proximaManutencao
-        ? new Date(formData.proximaManutencao) < new Date(currentDayString) // Ajustado para 'pendente' se data passada
+        ? new Date(formData.proximaManutencao) < new Date(currentDayString)
           ? 'pendente'
           : 'agendado'
         : 'pendente';
@@ -598,7 +598,7 @@ const handleCompleteMaintenance = async ( // Adicione 'async' aqui
       const dataToUpdate = {
         dataRealizacao: newDateRealizacao,
         chamado: newChamado,
-        status: 'concluido',
+        status: 'concluido' as const, // <<< CORRIGIDO: Adicionado 'as const' para garantir o literal
         // Opcional: para registrar quando foi concluído ou para ordenação
         timestampConclusao: new Date(),
       };
