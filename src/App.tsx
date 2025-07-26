@@ -513,7 +513,7 @@ const MaintenanceApp = () => {
         const machineDocRef = doc(db, 'machines', id); // Cria uma referência ao documento no Firestore
         await deleteDoc(machineDocRef); // Deleta o documento no Firestore
 
-        // Atualiza o estado local APÓS a exclusão bem-sucedida no Firestore
+        // Atualiza o estado local APÓS a exclusão bem- sucedida no Firestore
         setMachines((prev) => prev.filter((machine) => machine.id !== id));
         console.log("Máquina deletada do Firestore e do estado local com ID:", id);
       } catch (error) {
