@@ -187,7 +187,7 @@ const AppointmentForm = ({
     const [error, setError] = useState<string | null>(null);
 
     const availableMachines = machines.filter(m =>
-        !m.dataRealizacao && (!m.proximaManutencao || new Date(m.proximaManutencao) < new Date(currentDayString))
+        !m.dataRealizacao && (!m.proximaManutencao || new Date(m.proximaManutencao) < new Date(today))
     );
 
     const handleSubmit = () => {
@@ -201,7 +201,7 @@ const AppointmentForm = ({
             setError('Por favor, selecione uma data de agendamento.');
             return;
         }
-        if (new Date(appointmentDate) < new Date(currentDayString)) {
+        if (new Date(appointmentDate) < new Date(today)) {
             setError('A data de agendamento não pode ser no passado.');
             return;
         }
@@ -235,7 +235,8 @@ const AppointmentForm = ({
                             type="date"
                             value={appointmentDate}
                             onChange={(e: ChangeEvent<HTMLInputElement>) => setAppointmentDate(e.target.value)}
-                            className="w-full p-2 border rounded-lg"
+                            min={today} // <<<<< ADICIONE ESTA LINHA AQUI
+							className="w-full p-2 border rounded-lg"
                         />
                     </div>
 
