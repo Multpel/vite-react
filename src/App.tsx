@@ -439,19 +439,31 @@ const MaintenanceApp = () => {
   const currentDayString = new Date().toISOString().split('T')[0];
 
   // --- Efeito para carregar dados do LocalStorage ou dados iniciais ---
- useEffect(() => {
+  useEffect(() => {
   const fetchOrInitializeMachines = async () => {
     try {
       const machinesCollection = collection(db, 'machines');
       const machineSnapshot = await getDocs(machinesCollection);
 
+      // >>> NOVO LOGS PARA DEPURACAO <<<
+      console.log(`[DEBUG] Firestore collection 'machines' is empty: ${machineSnapshot.empty}`);
+      console.log(`[DEBUG] Length of initialMachines array: ${initialMachines.length}`);
+
       if (machineSnapshot.empty) {
         console.log("⚠️ Nenhuma máquina encontrada. Populando banco com initialMachines...");
+        let countAdded = 0; // Contador para rastrear o número de adições bem-sucedidas
         for (const machine of initialMachines) {
-          await addDoc(machinesCollection, machine);
+          try {
+            await addDoc(machinesCollection, machine);
+            countAdded++;
+            console.log(`✅ [DEBUG] Máquina adicionada: ${machine.maquina} (Total adicionadas: ${countAdded})`);
+          } catch (addError) {
+            console.error(`❌ [DEBUG] Erro ao adicionar máquina ${machine.maquina}:`, addError);
+          }
         }
+        console.log(`🏁 [DEBUG] População inicial concluída. Máquinas tentadas: ${initialMachines.length}, Máquinas adicionadas com sucesso: ${countAdded}`);
 
-        // Após inserir, buscar novamente
+        // Após inserir, buscar novamente para garantir que o estado local esteja atualizado
         const updatedSnapshot = await getDocs(machinesCollection);
         const machinesList = updatedSnapshot.docs.map(doc => {
           const data = doc.data();
@@ -473,6 +485,7 @@ const MaintenanceApp = () => {
         setMachines(machinesList);
       } else {
         // Banco já contém dados: carregar normalmente
+        console.log("ℹ️ [DEBUG] Banco já contém dados. Carregando dados existentes...");
         const machinesList = machineSnapshot.docs.map(doc => {
           const data = doc.data();
           const status: 'pendente' | 'agendado' | 'concluido' = data.dataRealizacao
@@ -493,12 +506,12 @@ const MaintenanceApp = () => {
         setMachines(machinesList);
       }
     } catch (error) {
-      console.error("Erro ao buscar ou inicializar máquinas do Firestore:", error);
+      console.error("🔥 [DEBUG] Erro fatal ao buscar ou inicializar máquinas do Firestore:", error);
     }
   };
 
   fetchOrInitializeMachines();
-}, [currentDayString]); // Adicione currentDayString nas dependências para recalcular se o dia mudar
+}, [currentDayString]); // currentDayString nas dependências para recalcular se o dia mudar
 
 
   const filteredEquipamentos = machines.filter((m) => {
