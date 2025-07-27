@@ -2,7 +2,7 @@ import { useState, useEffect, ChangeEvent } from 'react';
 import { Calendar, Settings, Search, Plus } from 'lucide-react';
 import { db } from './firebase-config';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-import initialMachines from './Data/initialMachines'; // ⬅️ Adicione esta linha
+import { initialMachines } from './Data/initialMachines';
 
 // --- 1. DEFINIÇÕES DE TIPOS E INTERFACES ---
 interface TabButtonProps {
