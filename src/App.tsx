@@ -1,7 +1,7 @@
 import { useState, useEffect, ChangeEvent } from 'react';
 import { Calendar, Settings, Search, Plus, Upload } from 'lucide-react'; // Adicionado 'Upload' para o ícone do botão
 import { db } from './firebase-config';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query } from 'firebase/firestore'; // Adicionado 'query'
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore'; // Adicionado 'query'
 import { initialMachines } from './Data/initialMachines'; // Verifique o caminho se for diferente
 
 // --- 1. DEFINIÇÕES DE TIPOS E INTERFACES ---
