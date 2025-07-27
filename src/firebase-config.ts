@@ -11,7 +11,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyDc4KaKwPYxJUiduqH1WzsHfWx4YEbS6aU",
   authDomain: "multpels-projects-vercel.firebaseapp.com",
   projectId: "multpels-projects-vercel",
-  storageBucket: "multpels-projects-vercel.appspot.com"
+  storageBucket: "multpels-projects-vercel.appspot.com",
   messagingSenderId: "1038398020775",
   appId: "1:1038398020775:web:a91b76a386efb4936a0f82",
   measurementId: "G-PHXFWFNN3D"
