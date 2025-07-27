@@ -1,8 +1,8 @@
 import { useState, useEffect, ChangeEvent } from 'react';
-import { Calendar, Settings, Search, Plus } from 'lucide-react';
+import { Calendar, Settings, Search, Plus, Upload } from 'lucide-react'; // Adicionado 'Upload' para o ícone do botão
 import { db } from './firebase-config';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-import { initialMachines } from './Data/initialMachines';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query } from 'firebase/firestore'; // Adicionado 'query'
+import { initialMachines } from './Data/initialMachines'; // Verifique o caminho se for diferente
 
 // --- 1. DEFINIÇÕES DE TIPOS E INTERFACES ---
 interface TabButtonProps {
@@ -239,7 +239,7 @@ const AppointmentForm = ({
                             value={appointmentDate}
                             onChange={(e: ChangeEvent<HTMLInputElement>) => setAppointmentDate(e.target.value)}
                             min={today} // <<<<< ADICIONE ESTA LINHA AQUI
-							className="w-full p-2 border rounded-lg"
+                            className="w-full p-2 border rounded-lg"
                         />
                     </div>
 
@@ -433,37 +433,88 @@ const MaintenanceApp = () => {
   const [showMachineForm, setShowMachineForm] = useState(false);
   const [showNewAppointmentForm, setShowNewAppointmentForm] = useState(false);
   const [showCompletionForm, setShowCompletionForm] = useState<Machine | null>(null);
-  // NOVO ESTADO: Para controlar o formulário de edição de agendamento
   const [showEditAppointmentForm, setShowEditAppointmentForm] = useState<Machine | null>(null);
+  const [isPopulating, setIsPopulating] = useState(false); // NOVO ESTADO: Para indicar se a população está em andamento
 
   const currentDayString = new Date().toISOString().split('T')[0];
 
-  // --- Efeito para carregar dados do LocalStorage ou dados iniciais ---
-  useEffect(() => {
-  const fetchOrInitializeMachines = async () => {
+  // --- Efeito para CARREGAR dados do Firestore (NÃO POPULAR MAIS AQUI) ---
+ useEffect(() => {
+  const fetchMachines = async () => {
     try {
+      console.log("[DEBUG] Fetching machines from Firestore...");
       const machinesCollection = collection(db, 'machines');
       const machineSnapshot = await getDocs(machinesCollection);
 
-      // >>> NOVO LOGS PARA DEPURACAO <<<
-      console.log(`[DEBUG] Firestore collection 'machines' is empty: ${machineSnapshot.empty}`);
-      console.log(`[DEBUG] Length of initialMachines array: ${initialMachines.length}`);
+      const machinesList = machineSnapshot.docs.map(doc => {
+        const data = doc.data();
+        const status: 'pendente' | 'agendado' | 'concluido' = data.dataRealizacao
+          ? 'concluido'
+          : data.proximaManutencao
+          ? new Date(data.proximaManutencao) < new Date(currentDayString)
+            ? 'pendente'
+            : 'agendado'
+          : 'pendente';
 
-      if (machineSnapshot.empty) {
-        console.log("⚠️ Nenhuma máquina encontrada. Populando banco com initialMachines...");
-        let countAdded = 0; // Contador para rastrear o número de adições bem-sucedidas
+        return {
+          id: doc.id,
+          ...data,
+          status,
+        } as Machine;
+      });
+      setMachines(machinesList);
+      console.log(`[DEBUG] Loaded ${machinesList.length} machines from Firestore.`);
+
+    } catch (error) {
+      console.error("🔥 [DEBUG] Erro ao carregar máquinas do Firestore:", error);
+    }
+  };
+
+  fetchMachines();
+}, [currentDayString]); // currentDayString nas dependências para recalcular se o dia mudar
+
+// --- NOVA FUNÇÃO: Para popular o banco de dados manualmente ---
+const handlePopulateDatabase = async () => {
+    if (isPopulating) {
+        console.warn("[DEBUG] População já em andamento.");
+        return;
+    }
+
+    const confirmPopulate = window.confirm(
+        "ATENÇÃO: Isso irá adicionar todas as máquinas iniciais ao Firestore. Somente use se o banco estiver vazio ou se você desejar adicionar DUPLICATAS. Deseja continuar?"
+    );
+
+    if (!confirmPopulate) {
+        return;
+    }
+
+    setIsPopulating(true);
+    try {
+        console.log("[DEBUG] Iniciando população manual do banco de dados...");
+        const machinesCollection = collection(db, 'machines');
+        let countAdded = 0;
+
+        // Opcional: Remover todos os documentos existentes ANTES de popular (use com cautela!)
+        // const existingSnapshot = await getDocs(machinesCollection);
+        // for (const d of existingSnapshot.docs) {
+        //     await deleteDoc(doc(db, 'machines', d.id));
+        //     console.log(`[DEBUG] Documento existente deletado: ${d.id}`);
+        // }
+        // console.log("[DEBUG] Todos os documentos existentes foram removidos.");
+
+
         for (const machine of initialMachines) {
-          try {
-            await addDoc(machinesCollection, machine);
-            countAdded++;
-            console.log(`✅ [DEBUG] Máquina adicionada: ${machine.maquina} (Total adicionadas: ${countAdded})`);
-          } catch (addError) {
-            console.error(`❌ [DEBUG] Erro ao adicionar máquina ${machine.maquina}:`, addError);
-          }
+            try {
+                await addDoc(machinesCollection, machine);
+                countAdded++;
+                console.log(`✅ [DEBUG] Máquina adicionada: ${machine.maquina} (Total: ${countAdded})`);
+            } catch (addError) {
+                console.error(`❌ [DEBUG] Erro ao adicionar máquina ${machine.maquina}:`, addError);
+            }
         }
-        console.log(`🏁 [DEBUG] População inicial concluída. Máquinas tentadas: ${initialMachines.length}, Máquinas adicionadas com sucesso: ${countAdded}`);
+        console.log(`🏁 [DEBUG] População manual concluída. Máquinas tentadas: ${initialMachines.length}, Máquinas adicionadas com sucesso: ${countAdded}`);
 
-        // Após inserir, buscar novamente para garantir que o estado local esteja atualizado
+        // Após popular, recarregar as máquinas no estado do React
         const updatedSnapshot = await getDocs(machinesCollection);
         const machinesList = updatedSnapshot.docs.map(doc => {
           const data = doc.data();
@@ -481,37 +532,16 @@ const MaintenanceApp = () => {
             status,
           } as Machine;
         });
-
         setMachines(machinesList);
-      } else {
-        // Banco já contém dados: carregar normalmente
-        console.log("ℹ️ [DEBUG] Banco já contém dados. Carregando dados existentes...");
-        const machinesList = machineSnapshot.docs.map(doc => {
-          const data = doc.data();
-          const status: 'pendente' | 'agendado' | 'concluido' = data.dataRealizacao
-            ? 'concluido'
-            : data.proximaManutencao
-            ? new Date(data.proximaManutencao) < new Date(currentDayString)
-              ? 'pendente'
-              : 'agendado'
-            : 'pendente';
+        alert(`População concluída! ${countAdded} máquinas adicionadas.`);
 
-          return {
-            id: doc.id,
-            ...data,
-            status,
-          } as Machine;
-        });
-
-        setMachines(machinesList);
-      }
     } catch (error) {
-      console.error("🔥 [DEBUG] Erro fatal ao buscar ou inicializar máquinas do Firestore:", error);
+        console.error("🔥 [DEBUG] Erro fatal durante a população manual:", error);
+        alert("Erro durante a população. Verifique o console.");
+    } finally {
+        setIsPopulating(false);
     }
-  };
-
-  fetchOrInitializeMachines();
-}, [currentDayString]); // currentDayString nas dependências para recalcular se o dia mudar
+};
 
 
   const filteredEquipamentos = machines.filter((m) => {
@@ -802,19 +832,29 @@ const handleCompleteMaintenance = async (
                 <p className="text-gray-600">Visualização por Status</p>
               </div>
             </div>
+            {/* BOTÃO DE POPULAÇÃO MANUAL - VISÍVEL APENAS NA ABA DE EQUIPAMENTOS */}
             {tab === 'equipamentos' && (
-              <button
-                onClick={() => {
-                  setEditingMachine(null);
-                  setShowMachineForm(true);
-                }}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl flex items-center gap-2"
-              >
-                <Plus className="w-5 h-5" />
-                Nova Máquina
-              </button>
+                <div className="flex flex-col md:flex-row gap-4">
+                    <button
+                        onClick={handlePopulateDatabase}
+                        disabled={isPopulating}
+                        className={`bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 ${isPopulating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                        <Upload className="w-5 h-5" />
+                        {isPopulating ? 'Populando...' : 'Popular Banco Inicial'}
+                    </button>
+                    <button
+                        onClick={() => {
+                            setEditingMachine(null);
+                            setShowMachineForm(true);
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl flex items-center gap-2"
+                    >
+                        <Plus className="w-5 h-5" />
+                        Nova Máquina
+                    </button>
+                </div>
             )}
-
             {tab === 'agendadas' && (
               <button
                 onClick={() => setShowNewAppointmentForm(true)}
