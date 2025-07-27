@@ -2,6 +2,7 @@ import { useState, useEffect, ChangeEvent } from 'react';
 import { Calendar, Settings, Search, Plus } from 'lucide-react';
 import { db } from './firebase-config';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import initialMachines from './data/initialMachines'; // ⬅️ Adicione esta linha
 
 // --- 1. DEFINIÇÕES DE TIPOS E INTERFACES ---
 interface TabButtonProps {
@@ -439,14 +440,21 @@ const MaintenanceApp = () => {
 
   // --- Efeito para carregar dados do LocalStorage ou dados iniciais ---
  useEffect(() => {
-    const fetchMachines = async () => {
-      try {
-        const machinesCollection = collection(db, 'machines');
-        const machineSnapshot = await getDocs(machinesCollection);
-        const machinesList = machineSnapshot.docs.map(doc => {
-          const data = doc.data(); // Pega os dados brutos do documento
+  const fetchOrInitializeMachines = async () => {
+    try {
+      const machinesCollection = collection(db, 'machines');
+      const machineSnapshot = await getDocs(machinesCollection);
 
-          // Lógica de cálculo de status (EXATAMENTE A QUE VOCÊ JÁ TINHA!)
+      if (machineSnapshot.empty) {
+        console.log("⚠️ Nenhuma máquina encontrada. Populando banco com initialMachines...");
+        for (const machine of initialMachines) {
+          await addDoc(machinesCollection, machine);
+        }
+
+        // Após inserir, buscar novamente
+        const updatedSnapshot = await getDocs(machinesCollection);
+        const machinesList = updatedSnapshot.docs.map(doc => {
+          const data = doc.data();
           const status: 'pendente' | 'agendado' | 'concluido' = data.dataRealizacao
             ? 'concluido'
             : data.proximaManutencao
@@ -456,18 +464,41 @@ const MaintenanceApp = () => {
             : 'pendente';
 
           return {
-            id: doc.id, // ID do Firestore
-            ...data, // Restante dos dados da máquina
-            status: status, // Status calculado
-          } as Machine; // Força o tipo Machine
+            id: doc.id,
+            ...data,
+            status,
+          } as Machine;
         });
+
         setMachines(machinesList);
-      } catch (error) {
-        console.error("Erro ao buscar máquinas do Firestore:", error);
+      } else {
+        // Banco já contém dados: carregar normalmente
+        const machinesList = machineSnapshot.docs.map(doc => {
+          const data = doc.data();
+          const status: 'pendente' | 'agendado' | 'concluido' = data.dataRealizacao
+            ? 'concluido'
+            : data.proximaManutencao
+            ? new Date(data.proximaManutencao) < new Date(currentDayString)
+              ? 'pendente'
+              : 'agendado'
+            : 'pendente';
+
+          return {
+            id: doc.id,
+            ...data,
+            status,
+          } as Machine;
+        });
+
+        setMachines(machinesList);
       }
-    };
-    fetchMachines();
-  }, [currentDayString]); // Adicione currentDayString nas dependências para recalcular se o dia mudar
+    } catch (error) {
+      console.error("Erro ao buscar ou inicializar máquinas do Firestore:", error);
+    }
+  };
+
+  fetchOrInitializeMachines();
+}, [currentDayString]); // Adicione currentDayString nas dependências para recalcular se o dia mudar
 
 
   const filteredEquipamentos = machines.filter((m) => {
