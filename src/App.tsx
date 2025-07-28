@@ -36,7 +36,7 @@ const TabButton = ({
 }: TabButtonProps) => {
   return (
     <button
-      className={`flex flex-col items-center px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors ${ // ALTERAÇÃO: text-xs para mobile, sm:text-sm para telas maiores
+      className={`flex flex-col items-center px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors ${
         current === value
           ? `${activeColorClass} text-white`
           : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -369,6 +369,8 @@ const EditAppointmentForm = ({
 }) => {
   const [newProximaManutencao, setNewProximaManutencao] = useState(currentProximaManutencao);
   const [error, setError] = useState<string | null>(null);
+
+  const currentDateString = new Date().toISOString().split('T')[0];
 
   const handleSubmit = () => {
     setError(null);
@@ -794,28 +796,28 @@ const handleCompleteMaintenance = async (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* ALTERAÇÃO: Padding responsivo para o container principal */}
       <div className="container mx-auto px-2 sm:px-4 md:px-8 py-8">
-        <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 md:p-8 mb-8"> {/* ALTERAÇÃO: Padding responsivo para o card principal */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6"> {/* ALTERAÇÃO: flex-col em mobile, flex-row em sm e acima. items-start para alinhar no topo em mobile */}
-            <div className="flex items-center gap-2 sm:gap-4 mb-4 sm:mb-0"> {/* ALTERAÇÃO: Ajuste de gap e margem inferior para mobile */}
-              <div className="bg-blue-600 p-2 sm:p-3 rounded-xl"> {/* ALTERAÇÃO: Padding responsivo para o ícone */}
-                <Settings className="w-6 h-6 sm:w-8 sm:h-8 text-white" /> {/* ALTERAÇÃO: Tamanho do ícone responsivo */}
+        <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 md:p-8 mb-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6">
+            <div className="flex items-center gap-2 sm:gap-4 mb-4 sm:mb-0">
+              <div className="bg-blue-600 p-2 sm:p-3 rounded-xl">
+                <Settings className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800"> {/* ALTERAÇÃO: Tamanho do título responsivo */}
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800">
                   Controle de Manutenção
                 </h1>
-                <p className="text-sm sm:text-base text-gray-600">Visualização por Status</p> {/* ALTERAÇÃO: Tamanho do subtítulo responsivo */}
+                <p className="text-sm sm:text-base text-gray-600">Visualização por Status</p>
               </div>
             </div>
             {/* BOTÃO DE POPULAÇÃO MANUAL - VISÍVEL APENAS NA ABA DE EQUIPAMENTOS */}
             {tab === 'equipamentos' && (
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto"> {/* ALTERAÇÃO: flex-col em mobile, w-full, ajuste de gap e w-auto em sm */}
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto">
                     <button
                         onClick={handlePopulateDatabase}
                         disabled={isPopulating}
-                        className={`bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl flex items-center justify-center gap-1 sm:gap-2 text-sm sm:text-base ${isPopulating ? 'opacity-50 cursor-not-allowed' : ''}`} {/* ALTERAÇÃO: padding, justify-center, gap, text-size responsivos */}
+                        className={`bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl flex items-center justify-center gap-1 sm:gap-2 text-sm sm:text-base ${isPopulating ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                        <Upload className="w-4 h-4 sm:w-5 sm:h-5" /> {/* ALTERAÇÃO: Tamanho do ícone responsivo */}
+                        <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
                         {isPopulating ? 'Populando...' : 'Popular Banco Inicial'}
                     </button>
                     <button
@@ -823,9 +825,9 @@ const handleCompleteMaintenance = async (
                             setEditingMachine(null);
                             setShowMachineForm(true);
                         }}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl flex items-center justify-center gap-1 sm:gap-2 text-sm sm:text-base" {/* ALTERAÇÃO: padding, justify-center, gap, text-size responsivos */}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl flex items-center justify-center gap-1 sm:gap-2 text-sm sm:text-base"
                     >
-                        <Plus className="w-4 h-4 sm:w-5 sm:h-5" /> {/* ALTERAÇÃO: Tamanho do ícone responsivo */}
+                        <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
                         Nova Máquina
                     </button>
                 </div>
@@ -833,15 +835,14 @@ const handleCompleteMaintenance = async (
             {tab === 'agendadas' && (
               <button
                 onClick={() => setShowNewAppointmentForm(true)}
-                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl flex items-center justify-center gap-1 sm:gap-2 text-sm sm:text-base w-full sm:w-auto" {/* ALTERAÇÃO: padding, justify-center, gap, text-size, w-full responsivos */}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl flex items-center justify-center gap-1 sm:gap-2 text-sm sm:text-base w-full sm:w-auto"
               >
-                <Calendar className="w-4 h-4 sm:w-5 sm:h-5" /> {/* ALTERAÇÃO: Tamanho do ícone responsivo */}
+                <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
                 Novo Agendamento
               </button>
             )}
           </div>
 
-          {/* ALTERAÇÃO: Flex-wrap para quebrar abas em mobile, overflow-x-auto para rolagem e ajuste de gap */}
           <div className="flex flex-wrap justify-center sm:justify-start gap-2 sm:gap-4 mb-8 overflow-x-auto pb-2 custom-scrollbar">
             <TabButton label="Equipamentos" value="equipamentos" current={tab} setTab={setTab} count={equipamentosCount} activeColorClass="bg-blue-600" />
             <TabButton label="Agendadas" value="agendadas" current={tab} setTab={setTab} count={agendadasCount} activeColorClass="bg-purple-600" />
@@ -851,7 +852,7 @@ const handleCompleteMaintenance = async (
 
           {tab === 'equipamentos' && (
             <div className="flex flex-col md:flex-row gap-4 mb-8">
-              <div className="flex-1 relative w-full md:w-auto"> {/* ALTERAÇÃO: w-full em mobile para o input */}
+              <div className="flex-1 relative w-full md:w-auto">
                 <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
@@ -862,7 +863,7 @@ const handleCompleteMaintenance = async (
                 />
               </div>
               <select
-                className="px-4 py-3 border rounded-xl w-full md:w-auto" {/* ALTERAÇÃO: w-full em mobile, w-auto em md */}
+                className="px-4 py-3 border rounded-xl w-full md:w-auto"
                 value={selectedSector}
                 onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedSector(e.target.value)}
               >
@@ -877,39 +878,37 @@ const handleCompleteMaintenance = async (
           )}
 
           <div className="overflow-x-auto">
-            <table className="min-w-full text-xs sm:text-sm"> {/* ALTERAÇÃO: text-xs para mobile, sm:text-sm para telas maiores */}
+            <table className="min-w-full text-xs sm:text-sm">
               <thead>
                 <tr className="bg-gray-100 text-left">
-                  {tab === 'equipamentos' && (
+                  {/* ALTERAÇÃO: Usando ternário para garantir que sempre há um retorno JSX ou null */}
+                  {tab === 'equipamentos' ? (
                     <>
                       <th className="p-2">Setor</th>
                       <th className="p-2">Máquina</th>
                       <th className="p-2">Etiqueta</th>
                       <th className="p-2 text-right">Ações</th>
                     </>
-                  )}
-                  {tab === 'agendadas' && (
+                  ) : tab === 'agendadas' ? (
                     <>
                       <th className="p-2">Data Agendamento</th>
                       <th className="p-2">Máquina</th>
                       <th className="p-2">Data Realização</th>
                     </>
-                  )}
-                  {tab === 'pendentes' && (
+                  ) : tab === 'pendentes' ? (
                     <>
                       <th className="p-2">Data Agendamento</th>
                       <th className="p-2">Máquina</th>
                       <th className="p-2">Data Realização</th>
                     </>
-                  )}
-                  {tab === 'realizadas' && (
+                  ) : tab === 'realizadas' ? (
                     <>
                       <th className="p-2">Data Agendamento</th>
                       <th className="p-2">Data Realização</th>
                       <th className="p-2">Máquina</th>
                       <th className="p-2">Status</th>
                     </>
-                  )}
+                  ) : null}
                 </tr>
               </thead>
               <tbody>
@@ -919,7 +918,8 @@ const handleCompleteMaintenance = async (
                   realizadas
                 ).map((m) => (
                   <tr key={m.id} className="border-b hover:bg-gray-50">
-                    {tab === 'equipamentos' && (
+                    {/* ALTERAÇÃO: Usando ternário para garantir que sempre há um retorno JSX ou null para as células */}
+                    {tab === 'equipamentos' ? (
                       <>
                         <td className="p-2">{m.setor}</td>
                         <td className="p-2">{m.maquina}</td>
@@ -929,8 +929,7 @@ const handleCompleteMaintenance = async (
                           <button onClick={() => handleDelete(m.id)} className="text-red-600 hover:underline">Excluir</button>
                         </td>
                       </>
-                    )}
-                    {tab === 'agendadas' && (
+                    ) : tab === 'agendadas' ? (
                       <>
                         <td className="p-2">
                           <span
@@ -953,8 +952,7 @@ const handleCompleteMaintenance = async (
                           </span>
                         </td>
                       </>
-                    )}
-                    {tab === 'pendentes' && (
+                    ) : tab === 'pendentes' ? (
                       <>
                         <td className="p-2">{m.proximaManutencao}</td>
                         <td className="p-2">
@@ -970,8 +968,7 @@ const handleCompleteMaintenance = async (
                           </span>
                         </td>
                       </>
-                    )}
-                    {tab === 'realizadas' && (
+                    ) : tab === 'realizadas' ? (
                       <>
                         <td className="p-2">{m.proximaManutencao || '—'}</td>
                         <td className="p-2">{m.dataRealizacao}</td>
@@ -985,7 +982,7 @@ const handleCompleteMaintenance = async (
                             : 'Em Dia'}
                         </td>
                       </>
-                    )}
+                    ) : null}
                   </tr>
                 ))}
               </tbody>
