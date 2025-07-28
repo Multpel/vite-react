@@ -566,10 +566,27 @@ const handlePopulateDatabase = async () => {
   const pendentesCount = pendentes.length;
   const realizadasCount = realizadas.length;
 
-  const handleEdit = (machine: Machine) => {
-    setEditingMachine(machine);
-    setShowMachineForm(true);
-  };
+  const handleEdit = (machineToEdit: Machine) => { // Renomeado para clareza
+    // Encontrar a última manutenção realizada para esta máquina
+    const lastCompletedMaintenance = machines
+      .filter(m =>
+        m.maquina === machineToEdit.maquina && // Mesma máquina
+        m.setor === machineToEdit.setor &&   // Mesmo setor (ou use etiqueta se for mais único)
+        m.dataRealizacao                     // Que tenha data de realização (foi concluída)
+      )
+      .sort((a, b) => {
+        // Ordena para encontrar a MAIS RECENTE
+        const dateA = new Date(a.dataRealizacao || '1970-01-01').getTime();
+        const dateB = new Date(b.dataRealizacao || '1970-01-01').getTime();
+        return dateB - dateA; // Ordem decrescente (mais recente primeiro)
+      })[0]; // Pega o primeiro (o mais recente)
+
+    // Cria um objeto de máquina temporário para preencher o formulário
+    const machineWithLastChamado = {
+      ...machineToEdit,
+      // Se encontrou a última manutenção concluída, usa o chamado dela; caso contrário, usa o chamado atual da máquina sendo editada (que pode estar vazio)
+      chamado: lastCompletedMaintenance ? lastCompletedMaintenance.chamado : machineToEdit.chamado
+    };
 
   const handleDelete = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir este equipamento?')) {
