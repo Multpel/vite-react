@@ -1,8 +1,8 @@
 import { useState, useEffect, ChangeEvent } from 'react';
-import { Calendar, Settings, Search, Plus, Upload } from 'lucide-react'; // Adicionado 'Upload' para o ícone do botão
+import { Calendar, Settings, Search, Plus, Upload } from 'lucide-react';
 import { db } from './firebase-config';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore'; // Adicionado 'query'
-import { initialMachines } from './Data/initialMachines'; // Verifique o caminho se for diferente
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { initialMachines } from './Data/initialMachines';
 
 // --- 1. DEFINIÇÕES DE TIPOS E INTERFACES ---
 interface TabButtonProps {
@@ -15,13 +15,13 @@ interface TabButtonProps {
 }
 
 type Machine = {
-  id: string; // <<< CORRIGIDO: DEVE SER STRING!
+  id: string;
   setor: string;
   maquina: string;
   etiqueta: string;
   chamado: string;
-  proximaManutencao?: string; // <<< DEVE SER OPCIONAL
-  dataRealizacao?: string;    // <<< DEVE SER OPCIONAL
+  proximaManutencao?: string;
+  dataRealizacao?: string;
   status: 'pendente' | 'agendado' | 'concluido';
 };
 
@@ -36,7 +36,7 @@ const TabButton = ({
 }: TabButtonProps) => {
   return (
     <button
-      className={`flex flex-col items-center px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+      className={`flex flex-col items-center px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors ${ // ALTERAÇÃO: text-xs para mobile, sm:text-sm para telas maiores
         current === value
           ? `${activeColorClass} text-white`
           : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -64,7 +64,7 @@ const MachineForm = ({
 }) => {
   const [formData, setFormData] = useState<Machine>(
     machine || {
-      id: '', // <<< CORRIGIDO: Era 0, agora string vazia
+      id: '',
       setor: '',
       maquina: '',
       etiqueta: '',
@@ -185,7 +185,7 @@ const AppointmentForm = ({
     onCancel: () => void;
     today: string;
 }) => {
-    const [selectedMachineId, setSelectedMachineId] = useState<string | ''>(''); // <<< CORRIGIDO: number para string
+    const [selectedMachineId, setSelectedMachineId] = useState<string | ''>('');
     const [appointmentDate, setAppointmentDate] = useState<string>('');
     const [error, setError] = useState<string | null>(null);
 
@@ -238,7 +238,7 @@ const AppointmentForm = ({
                             type="date"
                             value={appointmentDate}
                             onChange={(e: ChangeEvent<HTMLInputElement>) => setAppointmentDate(e.target.value)}
-                            min={today} // <<<<< ADICIONE ESTA LINHA AQUI
+                            min={today}
                             className="w-full p-2 border rounded-lg"
                         />
                     </div>
@@ -275,7 +275,7 @@ const CompletionForm = ({
   onSave,
   onCancel,
 }: {
-  machineId: string; // <<< CORRIGIDO: number para string
+  machineId: string;
   currentDateRealizacao: string;
   currentChamado: string;
   onSave: (machineId: string, dateRealizacao: string, chamado: string) => void | Promise<void>;
@@ -285,7 +285,6 @@ const CompletionForm = ({
   const [chamado, setChamado] = useState(currentChamado);
   const [error, setError] = useState<string | null>(null);
 
-  // CORREÇÃO: Variável renomeada para evitar conflito com 'today' de MaintenanceApp
   const currentDateString = new Date().toISOString().split('T')[0];
 
   const handleSubmit = () => {
@@ -294,7 +293,7 @@ const CompletionForm = ({
       setError('Por favor, informe a Data de Realização.');
       return;
     }
-    if (new Date(dateRealizacao) > new Date(currentDateString)) { // Usando a nova variável
+    if (new Date(dateRealizacao) > new Date(currentDateString)) {
         setError('A Data de Realização não pode ser futura.');
         return;
     }
@@ -360,13 +359,13 @@ const EditAppointmentForm = ({
   currentProximaManutencao,
   onSave,
   onCancel,
-  referenceDate, // 'today' é uma prop aqui, renomeada para evitar conflito
+  referenceDate,
 }: {
-  machineId: string; // <<< CORRIGIDO: number para string
+  machineId: string;
   currentProximaManutencao: string;
   onSave: (machineId: string, newProximaManutencao: string) => void | Promise<void>;
   onCancel: () => void;
-  referenceDate: string; // Renomeado
+  referenceDate: string;
 }) => {
   const [newProximaManutencao, setNewProximaManutencao] = useState(currentProximaManutencao);
   const [error, setError] = useState<string | null>(null);
@@ -377,7 +376,7 @@ const EditAppointmentForm = ({
       setError('Por favor, selecione uma nova Data de Agendamento.');
       return;
     }
-    if (new Date(newProximaManutencao) < new Date(referenceDate)) { // Usando referenceDate
+    if (new Date(newProximaManutencao) < new Date(referenceDate)) {
         setError('A nova Data de Agendamento não pode ser no passado.');
         return;
     }
@@ -434,7 +433,7 @@ const MaintenanceApp = () => {
   const [showNewAppointmentForm, setShowNewAppointmentForm] = useState(false);
   const [showCompletionForm, setShowCompletionForm] = useState<Machine | null>(null);
   const [showEditAppointmentForm, setShowEditAppointmentForm] = useState<Machine | null>(null);
-  const [isPopulating, setIsPopulating] = useState(false); // NOVO ESTADO: Para indicar se a população está em andamento
+  const [isPopulating, setIsPopulating] = useState(false);
 
   const currentDayString = new Date().toISOString().split('T')[0];
 
@@ -471,7 +470,7 @@ const MaintenanceApp = () => {
   };
 
   fetchMachines();
-}, [currentDayString]); // currentDayString nas dependências para recalcular se o dia mudar
+}, [currentDayString]);
 
 // --- NOVA FUNÇÃO: Para popular o banco de dados manualmente ---
 const handlePopulateDatabase = async () => {
@@ -494,15 +493,6 @@ const handlePopulateDatabase = async () => {
         const machinesCollection = collection(db, 'machines');
         let countAdded = 0;
 
-        // Opcional: Remover todos os documentos existentes ANTES de popular (use com cautela!)
-        // const existingSnapshot = await getDocs(machinesCollection);
-        // for (const d of existingSnapshot.docs) {
-        //     await deleteDoc(doc(db, 'machines', d.id));
-        //     console.log(`[DEBUG] Documento existente deletado: ${d.id}`);
-        // }
-        // console.log("[DEBUG] Todos os documentos existentes foram removidos.");
-
-
         for (const machine of initialMachines) {
             try {
                 await addDoc(machinesCollection, machine);
@@ -514,7 +504,6 @@ const handlePopulateDatabase = async () => {
         }
         console.log(`🏁 [DEBUG] População manual concluída. Máquinas tentadas: ${initialMachines.length}, Máquinas adicionadas com sucesso: ${countAdded}`);
 
-        // Após popular, recarregar as máquinas no estado do React
         const updatedSnapshot = await getDocs(machinesCollection);
         const machinesList = updatedSnapshot.docs.map(doc => {
           const data = doc.data();
@@ -557,17 +546,17 @@ const handlePopulateDatabase = async () => {
       !m.dataRealizacao &&
       m.proximaManutencao &&
       new Date(m.proximaManutencao) >= new Date(currentDayString)
-  ).sort((a, b) => (a.proximaManutencao || '').localeCompare(b.proximaManutencao || '')); // Handle undefined
+  ).sort((a, b) => (a.proximaManutencao || '').localeCompare(b.proximaManutencao || ''));
 
   const pendentes = machines.filter(
     (m) =>
       !m.dataRealizacao &&
       m.proximaManutencao &&
       new Date(m.proximaManutencao) < new Date(currentDayString)
-  ).sort((a, b) => (a.proximaManutencao || '').localeCompare(b.proximaManutencao || '')); // Handle undefined
+  ).sort((a, b) => (a.proximaManutencao || '').localeCompare(b.proximaManutencao || ''));
 
   const realizadas = machines.filter((m) => m.dataRealizacao)
-    .sort((a, b) => (b.dataRealizacao || '').localeCompare(a.dataRealizacao || '')); // Handle undefined
+    .sort((a, b) => (b.dataRealizacao || '').localeCompare(a.dataRealizacao || ''));
 
   const sectors = [...new Set(machines.map((m) => m.setor))].sort();
 
@@ -581,23 +570,21 @@ const handlePopulateDatabase = async () => {
     setShowMachineForm(true);
   };
 
-  const handleDelete = async (id: string) => { // A função agora é async e o ID é string
-    if (confirm('Tem certeza que deseja excluir este equipamento?')) { // Mantém a confirmação
+  const handleDelete = async (id: string) => {
+    if (confirm('Tem certeza que deseja excluir este equipamento?')) {
       try {
-        const machineDocRef = doc(db, 'machines', id); // Cria uma referência ao documento no Firestore
-        await deleteDoc(machineDocRef); // Deleta o documento no Firestore
+        const machineDocRef = doc(db, 'machines', id);
+        await deleteDoc(machineDocRef);
 
-        // Atualiza o estado local APÓS a exclusão bem- sucedida no Firestore
         setMachines((prev) => prev.filter((machine) => machine.id !== id));
         console.log("Máquina deletada do Firestore e do estado local com ID:", id);
       } catch (error) {
         console.error("Erro ao deletar máquina do Firestore:", error);
-        // Opcional: Adicionar feedback visual para o usuário em caso de erro
       }
     }
   };
 
-const handleSave = async (formData: Omit<Machine, 'id'>) => { // Tornamos a função async
+const handleSave = async (formData: Omit<Machine, 'id'>) => {
     try {
       const calculatedStatus: 'pendente' | 'agendado' | 'concluido' = formData.dataRealizacao
         ? 'concluido'
@@ -608,40 +595,34 @@ const handleSave = async (formData: Omit<Machine, 'id'>) => { // Tornamos a fun�
         : 'pendente';
 
       if (editingMachine) {
-        // Lógica de EDIÇÃO para o Firestore
-        const machineDocRef = doc(db, 'machines', editingMachine.id); // Cria uma referência ao documento Firestore
+        const machineDocRef = doc(db, 'machines', editingMachine.id);
 
-        // Os dados a serem atualizados no Firestore
         const dataToUpdate = {
           ...formData,
-          status: calculatedStatus, // Salva o status calculado no Firestore
-          timestamp: new Date(), // Opcional: atualiza o timestamp
+          status: calculatedStatus,
+          timestamp: new Date(),
         };
 
-        await updateDoc(machineDocRef, dataToUpdate); // Atualiza o documento no Firestore
+        await updateDoc(machineDocRef, dataToUpdate);
 
-        // Atualiza o estado local APÓS a operação no Firestore
         setMachines((prev) =>
           prev.map((m) =>
-            m.id === editingMachine.id ? { ...m, ...formData, status: calculatedStatus } as Machine : m // Explicitly cast to Machine
+            m.id === editingMachine.id ? { ...m, ...formData, status: calculatedStatus } as Machine : m
           )
         );
         console.log("Máquina atualizada no Firestore e no estado local!");
 
       } else {
-        // Lógica de ADICIONAR NOVA MÁQUINA para o Firestore
         const newMachineData = {
           ...formData,
-          status: calculatedStatus, // Salva o status calculado no Firestore
-          timestamp: new Date(), // Adicione um timestamp para ordenação
+          status: calculatedStatus,
+          timestamp: new Date(),
         };
 
-        // Adiciona um novo documento à coleção 'machines' no Firestore
         const docRef = await addDoc(collection(db, 'machines'), newMachineData);
 
-        // Adiciona a nova máquina ao estado local com o ID gerado pelo Firestore
         const newMachineWithId: Machine = {
-          id: docRef.id, // Use o ID gerado pelo Firestore
+          id: docRef.id,
           ...newMachineData,
         };
         setMachines((prev) => [...prev, newMachineWithId]);
@@ -651,25 +632,21 @@ const handleSave = async (formData: Omit<Machine, 'id'>) => { // Tornamos a fun�
       setEditingMachine(null);
     } catch (error) {
       console.error("Erro ao salvar máquina no Firestore:", error);
-      // Opcional: Adicionar feedback visual para o usuário em caso de erro
     }
   };
 
-  // Função para iniciar a finalização da manutenção (abre o formulário)
   const startCompletion = (machine: Machine) => {
     setShowCompletionForm(machine);
   };
 
-  // Função para finalizar a manutenção com data e chamado
 const handleCompleteMaintenance = async (
     id: string,
     newDateRealizacao: string,
     newChamado: string
   ) => {
     try {
-      // --- 1. Atualizar a máquina concluída no Firestore ---
       const machineDocRef = doc(db, 'machines', id);
-      const dataToUpdate: { // Explicitly type dataToUpdate for clarity
+      const dataToUpdate: {
         dataRealizacao: string;
         chamado: string;
         status: 'concluido';
@@ -682,7 +659,6 @@ const handleCompleteMaintenance = async (
       };
       await updateDoc(machineDocRef, dataToUpdate);
 
-      // --- 2. Preparar e adicionar a nova máquina (próximo ciclo) no Firestore ---
       const completedMachine = machines.find(m => m.id === id);
 
       if (completedMachine && newDateRealizacao) {
@@ -707,14 +683,13 @@ const handleCompleteMaintenance = async (
 
         const newDocRef = await addDoc(collection(db, 'machines'), newCycleMachineData);
 
-        // --- 3. Atualizar o estado local 'machines' ---
         let updatedMachines = machines.map((machine) => {
           if (machine.id === id) {
             return {
               ...machine,
-              dataRealizacao: newDateRealizacao, // Directly use the new value
-              chamado: newChamado, // Directly use the new value
-              status: 'concluido', // Explicitly assign the literal type here
+              dataRealizacao: newDateRealizacao,
+              chamado: newChamado,
+              status: 'concluido',
             } as Machine;
           }
           return machine;
@@ -739,7 +714,6 @@ const handleCompleteMaintenance = async (
     }
   };
 
-  // NOVO: Função para salvar a nova data de agendamento
   const handleEditAppointmentDate = async (
     id: string,
     newProximaManutencao: string
@@ -818,29 +792,30 @@ const handleCompleteMaintenance = async (
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      <div className="container mx-auto px-4 py-8">
-        <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <div className="bg-blue-600 p-3 rounded-xl">
-                <Settings className="w-8 h-8 text-white" />
+      {/* ALTERAÇÃO: Padding responsivo para o container principal */}
+      <div className="container mx-auto px-2 sm:px-4 md:px-8 py-8">
+        <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 md:p-8 mb-8"> {/* ALTERAÇÃO: Padding responsivo para o card principal */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6"> {/* ALTERAÇÃO: flex-col em mobile, flex-row em sm e acima. items-start para alinhar no topo em mobile */}
+            <div className="flex items-center gap-2 sm:gap-4 mb-4 sm:mb-0"> {/* ALTERAÇÃO: Ajuste de gap e margem inferior para mobile */}
+              <div className="bg-blue-600 p-2 sm:p-3 rounded-xl"> {/* ALTERAÇÃO: Padding responsivo para o ícone */}
+                <Settings className="w-6 h-6 sm:w-8 sm:h-8 text-white" /> {/* ALTERAÇÃO: Tamanho do ícone responsivo */}
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-800">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800"> {/* ALTERAÇÃO: Tamanho do título responsivo */}
                   Controle de Manutenção
                 </h1>
-                <p className="text-gray-600">Visualização por Status</p>
+                <p className="text-sm sm:text-base text-gray-600">Visualização por Status</p> {/* ALTERAÇÃO: Tamanho do subtítulo responsivo */}
               </div>
             </div>
             {/* BOTÃO DE POPULAÇÃO MANUAL - VISÍVEL APENAS NA ABA DE EQUIPAMENTOS */}
             {tab === 'equipamentos' && (
-                <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto"> {/* ALTERAÇÃO: flex-col em mobile, w-full, ajuste de gap e w-auto em sm */}
                     <button
                         onClick={handlePopulateDatabase}
                         disabled={isPopulating}
-                        className={`bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 ${isPopulating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl flex items-center justify-center gap-1 sm:gap-2 text-sm sm:text-base ${isPopulating ? 'opacity-50 cursor-not-allowed' : ''}`} {/* ALTERAÇÃO: padding, justify-center, gap, text-size responsivos */}
                     >
-                        <Upload className="w-5 h-5" />
+                        <Upload className="w-4 h-4 sm:w-5 sm:h-5" /> {/* ALTERAÇÃO: Tamanho do ícone responsivo */}
                         {isPopulating ? 'Populando...' : 'Popular Banco Inicial'}
                     </button>
                     <button
@@ -848,9 +823,9 @@ const handleCompleteMaintenance = async (
                             setEditingMachine(null);
                             setShowMachineForm(true);
                         }}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl flex items-center gap-2"
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl flex items-center justify-center gap-1 sm:gap-2 text-sm sm:text-base" {/* ALTERAÇÃO: padding, justify-center, gap, text-size responsivos */}
                     >
-                        <Plus className="w-5 h-5" />
+                        <Plus className="w-4 h-4 sm:w-5 sm:h-5" /> {/* ALTERAÇÃO: Tamanho do ícone responsivo */}
                         Nova Máquina
                     </button>
                 </div>
@@ -858,15 +833,16 @@ const handleCompleteMaintenance = async (
             {tab === 'agendadas' && (
               <button
                 onClick={() => setShowNewAppointmentForm(true)}
-                className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-xl flex items-center gap-2"
+                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl flex items-center justify-center gap-1 sm:gap-2 text-sm sm:text-base w-full sm:w-auto" {/* ALTERAÇÃO: padding, justify-center, gap, text-size, w-full responsivos */}
               >
-                <Calendar className="w-5 h-5" />
+                <Calendar className="w-4 h-4 sm:w-5 sm:h-5" /> {/* ALTERAÇÃO: Tamanho do ícone responsivo */}
                 Novo Agendamento
               </button>
             )}
           </div>
 
-          <div className="flex gap-4 mb-8">
+          {/* ALTERAÇÃO: Flex-wrap para quebrar abas em mobile, overflow-x-auto para rolagem e ajuste de gap */}
+          <div className="flex flex-wrap justify-center sm:justify-start gap-2 sm:gap-4 mb-8 overflow-x-auto pb-2 custom-scrollbar">
             <TabButton label="Equipamentos" value="equipamentos" current={tab} setTab={setTab} count={equipamentosCount} activeColorClass="bg-blue-600" />
             <TabButton label="Agendadas" value="agendadas" current={tab} setTab={setTab} count={agendadasCount} activeColorClass="bg-purple-600" />
             <TabButton label="Pendentes" value="pendentes" current={tab} setTab={setTab} count={pendentesCount} activeColorClass="bg-orange-600" />
@@ -875,7 +851,7 @@ const handleCompleteMaintenance = async (
 
           {tab === 'equipamentos' && (
             <div className="flex flex-col md:flex-row gap-4 mb-8">
-              <div className="flex-1 relative">
+              <div className="flex-1 relative w-full md:w-auto"> {/* ALTERAÇÃO: w-full em mobile para o input */}
                 <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
@@ -886,7 +862,7 @@ const handleCompleteMaintenance = async (
                 />
               </div>
               <select
-                className="px-4 py-3 border rounded-xl"
+                className="px-4 py-3 border rounded-xl w-full md:w-auto" {/* ALTERAÇÃO: w-full em mobile, w-auto em md */}
                 value={selectedSector}
                 onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedSector(e.target.value)}
               >
@@ -901,7 +877,7 @@ const handleCompleteMaintenance = async (
           )}
 
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
+            <table className="min-w-full text-xs sm:text-sm"> {/* ALTERAÇÃO: text-xs para mobile, sm:text-sm para telas maiores */}
               <thead>
                 <tr className="bg-gray-100 text-left">
                   {tab === 'equipamentos' && (
@@ -1047,7 +1023,6 @@ const handleCompleteMaintenance = async (
             />
           )}
 
-          {/* NOVO: Renderização condicional do formulário de edição de agendamento */}
           {showEditAppointmentForm && (
             <EditAppointmentForm
               machineId={showEditAppointmentForm.id}
