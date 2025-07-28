@@ -1,8 +1,8 @@
 import { useState, useEffect, ChangeEvent } from 'react';
-import { Calendar, Settings, Search, Plus, Upload } from 'lucide-react';
+import { Calendar, Settings, Search, Plus } from 'lucide-react'; // 'Upload' removido
 import { db } from './firebase-config';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-import { initialMachines } from './Data/initialMachines';
+// import { initialMachines } from './Data/initialMachines'; // Não é mais necessário se handlePopulateDatabase for removido completamente
 
 // --- 1. DEFINIÇÕES DE TIPOS E INTERFACES ---
 interface TabButtonProps {
@@ -433,7 +433,7 @@ const MaintenanceApp = () => {
   const [showNewAppointmentForm, setShowNewAppointmentForm] = useState(false);
   const [showCompletionForm, setShowCompletionForm] = useState<Machine | null>(null);
   const [showEditAppointmentForm, setShowEditAppointmentForm] = useState<Machine | null>(null);
-  const [isPopulating, setIsPopulating] = useState(false);
+  // const [isPopulating, setIsPopulating] = useState(false); // Não é mais necessário
 
   const currentDayString = new Date().toISOString().split('T')[0];
 
@@ -472,7 +472,8 @@ const MaintenanceApp = () => {
   fetchMachines();
 }, [currentDayString]);
 
-// --- NOVA FUNÇÃO: Para popular o banco de dados manualmente ---
+// --- FUNÇÃO handlePopulateDatabase REMOVIDA OU COMENTADA ---
+/*
 const handlePopulateDatabase = async () => {
     if (isPopulating) {
         console.warn("[DEBUG] População já em andamento.");
@@ -531,7 +532,7 @@ const handlePopulateDatabase = async () => {
         setIsPopulating(false);
     }
 };
-
+*/
 
   const filteredEquipamentos = machines.filter((m) => {
     const matchSearch =
