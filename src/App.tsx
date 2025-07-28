@@ -1,10 +1,9 @@
 import { useState, useEffect, ChangeEvent } from 'react';
 import { Calendar, Settings, Search, Plus } from 'lucide-react';
-import { db, auth } from './firebase-config'; // Importe 'auth' do seu firebase-config
+import { db, auth } from './firebase-config';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-import { onAuthStateChanged, signOut, User } from 'firebase/auth'; // Importe onAuthStateChanged, signOut, User
+import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 
-// Importe seu novo componente de autenticação
 import AuthForm from './components/AuthForm';
 
 // --- 1. DEFINIÇÕES DE TIPOS E INTERFACES ---
@@ -18,41 +17,38 @@ interface TabButtonProps {
 }
 
 type Machine = {
-  id: string; // <<< CORRIGIDO: DEVE SER STRING!
+  id: string;
   setor: string;
   maquina: string;
   etiqueta: string;
   chamado: string;
-  proximaManutencao?: string; // <<< DEVE SER OPCIONAL
-  dataRealizacao?: string;    // <<< DEVE SER OPCIONAL
+  proximaManutencao?: string;
+  dataRealizacao?: string;
   status: 'pendente' | 'agendado' | 'concluido';
 };
 
-// --- 2. COMPONENTES AUXILIARES ---
-const TabButton = ({
-  label,
-  value,
-  current,
-  setTab,
-  count,
-  activeColorClass
-}: TabButtonProps) => {
-  return (
-    <button
-      className={`flex flex-col items-center p-3 rounded-lg w-full sm:w-auto min-w-[100px] transition-all duration-300 ease-in-out
-        ${current === value ? `${activeColorClass} text-white shadow-lg` : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-      onClick={() => setTab(value)}
-    >
-      <span className="text-lg sm:text-xl font-bold">{count}</span>
-      <span className="text-xs sm:text-sm mt-1">{label}</span>
-    </button>
-  );
+// --- FUNÇÕES AUXILIARES GLOBAIS ---
+/**
+ * Retorna o próximo dia útil a partir de uma data.
+ * Se a data já for um dia útil, retorna a própria data.
+ * Se for fim de semana, avança para a próxima segunda-feira.
+ * @param date O objeto Date inicial.
+ * @returns O objeto Date correspondente ao próximo dia útil.
+ */
+const getNextBusinessDay = (date: Date): Date => {
+  const newDate = new Date(date.getTime()); // Cria uma cópia para não modificar o original
+  let day = newDate.getDay();
+
+  if (day === 6) { // Sábado
+    newDate.setDate(newDate.getDate() + 2);
+  } else if (day === 0) { // Domingo
+    newDate.setDate(newDate.getDate() + 1);
+  }
+  return newDate;
 };
 
-// --- COMPONENTES MODAIS (MachineForm, AppointmentForm, CompletionForm, EditAppointmentForm) ---
-// Certifique-se de que estes componentes estão definidos em arquivos separados (ex: MachineForm.tsx, etc.)
-// e importados aqui, ou definidos neste mesmo arquivo se preferir.
-// O código abaixo assume que eles estão importados ou definidos em App.tsx.
+
+// --- 2. COMPONENTES MODAIS (DEFINIDOS FORA DO MaintenanceApp para acesso global) ---
 
 interface MachineFormProps {
   machine: Machine | null;
@@ -74,7 +70,7 @@ const MachineForm: React.FC<MachineFormProps> = ({ machine, onSave, onCancel, se
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg p-6 shadow-xl w-full max-w-md">
         <h2 className="text-2xl font-bold mb-4">{machine ? 'Editar Máquina' : 'Adicionar Nova Máquina'}</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -136,30 +132,20 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ machines, onSave, onC
     }
   };
 
-  const getNextBusinessDay = (date: Date): Date => {
-    const newDate = new Date(date.getTime());
-    let day = newDate.getDay();
-
-    if (day === 6) { // Sábado
-      newDate.setDate(newDate.getDate() + 2);
-    } else if (day === 0) { // Domingo
-      newDate.setDate(newDate.getDate() + 1);
-    }
-    return newDate;
-  };
-
   useEffect(() => {
     // Define a data padrão para o próximo dia útil a partir de 'today'
     const todayDate = new Date(today);
+    // USANDO A FUNÇÃO GLOBAL getNextBusinessDay
     const nextBusinessDay = getNextBusinessDay(todayDate);
     const formattedNextBusinessDay = nextBusinessDay.toISOString().split('T')[0];
     setProximaManutencao(formattedNextBusinessDay);
   }, [today]);
 
-  const availableMachines = machines.filter(m => m.status === 'pendente' || m.status === 'equipamentos');
+  // CORRIGIDO: Filtra por máquinas que não estão concluídas
+  const availableMachines = machines.filter(m => m.status !== 'concluido');
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg p-6 shadow-xl w-full max-w-md">
         <h2 className="text-2xl font-bold mb-4">Agendar Manutenção</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -222,7 +208,7 @@ const CompletionForm: React.FC<CompletionFormProps> = ({ machineId, currentDateR
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg p-6 shadow-xl w-full max-w-md">
         <h2 className="text-2xl font-bold mb-4">Concluir Manutenção</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -271,6 +257,7 @@ const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
   useEffect(() => {
     if (!currentProximaManutencao) {
       const todayDate = new Date(referenceDate);
+      // USANDO A FUNÇÃO GLOBAL getNextBusinessDay
       const nextBusinessDay = getNextBusinessDay(todayDate);
       const formattedNextBusinessDay = nextBusinessDay.toISOString().split('T')[0];
       setNewProximaManutencao(formattedNextBusinessDay);
@@ -284,20 +271,8 @@ const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
     }
   };
 
-  const getNextBusinessDay = (date: Date): Date => {
-    const newDate = new Date(date.getTime());
-    let day = newDate.getDay();
-
-    if (day === 6) { // Sábado
-      newDate.setDate(newDate.getDate() + 2);
-    } else if (day === 0) { // Domingo
-      newDate.setDate(newDate.getDate() + 1);
-    }
-    return newDate;
-  };
-
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg p-6 shadow-xl w-full max-w-md">
         <h2 className="text-2xl font-bold mb-4">Editar Agendamento</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -322,34 +297,10 @@ const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
 };
 
 
-// --- FUNÇÕES AUXILIARES PARA VERIFICAR DIA ÚTIL ---
-/**
- * Retorna o próximo dia útil a partir de uma data.
- * Se a data já for um dia útil, retorna a própria data.
- * Se for fim de semana, avança para a próxima segunda-feira.
- * @param date O objeto Date inicial.
- * @returns O objeto Date correspondente ao próximo dia útil.
- */
-const getNextBusinessDay = (date: Date): Date => {
-  const newDate = new Date(date.getTime()); // Cria uma cópia para não modificar o original
-  let day = newDate.getDay();
-
-  // Se for sábado (6), adiciona 2 dias para chegar na segunda
-  // Se for domingo (0), adiciona 1 dia para chegar na segunda
-  if (day === 6) { // Sábado
-    newDate.setDate(newDate.getDate() + 2);
-  } else if (day === 0) { // Domingo
-    newDate.setDate(newDate.getDate() + 1);
-  }
-  return newDate;
-};
-
-
-// --- COMPONENTE PRINCIPAL (MaintenanceApp) ---
+// --- 3. COMPONENTE PRINCIPAL (MaintenanceApp) ---
 const MaintenanceApp = () => {
-  // --- NOVOS ESTADOS PARA AUTENTICAÇÃO ---
-  const [currentUser, setCurrentUser] = useState<User | null>(null); // Armazena o usuário logado
-  const [loadingAuth, setLoadingAuth] = useState(true); // Indica se a verificação inicial de autenticação terminou
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
 
   const [machines, setMachines] = useState<Machine[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -363,23 +314,19 @@ const MaintenanceApp = () => {
 
   const currentDayString = new Date().toISOString().split('T')[0];
 
-  // --- Efeito para MONITORAR o estado de autenticação ---
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
-      setLoadingAuth(false); // A verificação inicial terminou
+      setLoadingAuth(false);
       console.log("[DEBUG] Estado de autenticação alterado:", user ? user.email : "Nenhum usuário");
     });
-
-    // Limpeza do listener quando o componente é desmontado
     return () => unsubscribe();
-  }, []); // Array de dependências vazio para rodar apenas uma vez na montagem
+  }, []);
 
-  // --- Efeito para CARREGAR dados do Firestore (só se o usuário estiver logado) ---
   useEffect(() => {
     const fetchMachines = async () => {
-      if (!currentUser) { // Não tenta carregar se não houver usuário logado
-        setMachines([]); // Limpa as máquinas se o usuário deslogar
+      if (!currentUser) {
+        setMachines([]);
         return;
       }
       try {
@@ -412,20 +359,17 @@ const MaintenanceApp = () => {
     };
 
     fetchMachines();
-  }, [currentUser, currentDayString]); // Depende de currentUser e currentDayString
+  }, [currentUser, currentDayString]);
 
-  // Função para fazer logout
   const handleSignOut = async () => {
     try {
       await signOut(auth);
       console.log('Usuário deslogado com sucesso!');
-      // O `onAuthStateChanged` vai detectar a mudança e atualizar `currentUser` para null
     } catch (error) {
       console.error('Erro ao deslogar:', error);
     }
   };
 
-  // --- Seus filtros e contadores existentes ---
   const sectors = Array.from(new Set(machines.map(m => m.setor)));
 
   const filteredEquipamentos = machines.filter(machine =>
@@ -445,7 +389,7 @@ const MaintenanceApp = () => {
   });
   const realizadas = machines.filter(m => m.status === 'concluido').sort((a, b) => {
     if (!a.dataRealizacao || !b.dataRealizacao) return 0;
-    return new Date(b.dataRealizacao).getTime() - new Date(a.dataRealizacao).getTime(); // Mais recente primeiro
+    return new Date(b.dataRealizacao).getTime() - new Date(a.dataRealizacao).getTime();
   });
 
   const equipamentosCount = filteredEquipamentos.length;
@@ -454,7 +398,6 @@ const MaintenanceApp = () => {
   const realizadasCount = realizadas.length;
 
 
-  // --- Seus handlers de CRUD existentes ---
   const handleSave = async (newMachineData: Omit<Machine, 'id' | 'status'>, id?: string) => {
     try {
       if (id) {
@@ -464,16 +407,12 @@ const MaintenanceApp = () => {
       } else {
         await addDoc(collection(db, 'machines'), {
           ...newMachineData,
-          status: 'pendente' // Nova máquina começa como pendente
+          status: 'pendente'
         });
         console.log("Nova máquina adicionada com sucesso!");
       }
       setShowMachineForm(false);
       setEditingMachine(null);
-      // Recarregar máquinas após salvar
-      // Este useEffect já será acionado quando currentUser mudar, mas podemos forçar um recarregamento se necessário.
-      // Ou, melhor, atualizar o estado localmente. Por simplicidade, faremos um fetch completo.
-      // O `useEffect` com `currentUser` já fará isso indiretamente se o usuário estiver logado.
     } catch (error) {
       console.error("Erro ao salvar máquina:", error);
     }
@@ -484,7 +423,6 @@ const MaintenanceApp = () => {
       try {
         await deleteDoc(doc(db, 'machines', id));
         console.log(`Máquina ${id} excluída com sucesso!`);
-        // Recarregar máquinas após excluir
         setMachines(machines.filter(m => m.id !== id));
       } catch (error) {
         console.error("Erro ao excluir máquina:", error);
@@ -502,12 +440,11 @@ const MaintenanceApp = () => {
       const machineRef = doc(db, 'machines', machineId);
       await updateDoc(machineRef, {
         proximaManutencao: proximaManutencao,
-        chamado: chamado, // Atualiza o chamado ao agendar
-        dataRealizacao: null, // Garante que a data de realização é nula ao agendar
+        chamado: chamado,
+        dataRealizacao: null,
       });
       console.log(`Agendamento para máquina ${machineId} salvo com sucesso!`);
       setShowNewAppointmentForm(false);
-      // Recarregar máquinas
     } catch (error) {
       console.error("Erro ao salvar agendamento:", error);
     }
@@ -522,11 +459,10 @@ const MaintenanceApp = () => {
       const machineRef = doc(db, 'machines', machineId);
       await updateDoc(machineRef, {
         dataRealizacao: dataRealizacao,
-        chamado: chamado, // Atualiza ou define o chamado ao concluir
+        chamado: chamado,
       });
       console.log(`Manutenção para máquina ${machineId} concluída em ${dataRealizacao}!`);
       setShowCompletionForm(null);
-      // Recarregar máquinas
     } catch (error) {
       console.error("Erro ao concluir manutenção:", error);
     }
@@ -540,13 +476,11 @@ const MaintenanceApp = () => {
       });
       console.log(`Data de agendamento para máquina ${machineId} atualizada para ${newProximaManutencao}!`);
       setShowEditAppointmentForm(null);
-      // Recarregar máquinas
     } catch (error) {
       console.error("Erro ao editar data de agendamento:", error);
     }
   };
 
-  // --- RENDERIZAÇÃO CONDICIONAL BASEADA NO ESTADO DE AUTENTICAÇÃO ---
   if (loadingAuth) {
     return (
       <div className="flex justify-center items-center min-h-screen text-lg">
@@ -556,13 +490,11 @@ const MaintenanceApp = () => {
   }
 
   if (!currentUser) {
-    // Se não houver usuário logado, mostre o formulário de autenticação
     return (
       <AuthForm onAuthSuccess={() => { /* O useEffect de onAuthStateChanged já vai lidar com a navegação */ }} />
     );
   }
 
-  // Se o usuário estiver logado, renderize o seu MaintenanceApp completo
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <div className="container mx-auto px-2 sm:px-4 md:px-8 py-8">
@@ -579,14 +511,12 @@ const MaintenanceApp = () => {
                 <p className="text-sm sm:text-base text-gray-600">Visualização por Status</p>
               </div>
             </div>
-            {/* NOVO: BOTÃO DE LOGOUT */}
             <button
                 onClick={handleSignOut}
                 className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl flex items-center justify-center gap-1 sm:gap-2 text-sm sm:text-base w-full sm:w-auto"
             >
-                Sair ({currentUser.email}) {/* Exibe o e-mail do usuário logado */}
+                Sair ({currentUser.email})
             </button>
-            {/* RESTO DOS SEUS BOTÕES DE ADICIONAR MÁQUINA/AGENDAMENTO */}
             {tab === 'equipamentos' && (
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto">
                     <button
@@ -612,8 +542,6 @@ const MaintenanceApp = () => {
             )}
           </div>
 
-          {/* RESTO DO SEU CÓDIGO DO APP (Tabs, Tabela, Formulários Modais) */}
-          {/* Mantenha o resto do seu código inalterado a partir daqui */}
           <div className="flex flex-wrap justify-center sm:justify-start gap-2 sm:gap-4 mb-8 overflow-x-auto pb-2 custom-scrollbar">
             <TabButton label="Equipamentos" value="equipamentos" current={tab} setTab={setTab} count={equipamentosCount} activeColorClass="bg-blue-600" />
             <TabButton label="Agendadas" value="agendadas" current={tab} setTab={setTab} count={agendadasCount} activeColorClass="bg-purple-600" />
@@ -652,7 +580,6 @@ const MaintenanceApp = () => {
             <table className="min-w-full text-xs sm:text-sm">
               <thead>
                 <tr className="bg-gray-100 text-left">
-                  {/* ALTERAÇÃO: Usando ternário para garantir que sempre há um retorno JSX ou null */}
                   {tab === 'equipamentos' ? (
                     <>
                       <th className="p-2">Setor</th>
@@ -689,7 +616,6 @@ const MaintenanceApp = () => {
                   realizadas
                 ).map((m) => (
                   <tr key={m.id} className="border-b hover:bg-gray-50">
-                    {/* ALTERAÇÃO: Usando ternário para garantir que sempre há um retorno JSX ou null para as células */}
                     {tab === 'equipamentos' ? (
                       <>
                         <td className="p-2">{m.setor}</td>
