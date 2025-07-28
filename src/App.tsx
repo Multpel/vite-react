@@ -25,6 +25,7 @@ type Machine = {
 };
 
 // --- FUNÇÕES AUXILIARES PARA VERIFICAR DIA ÚTIL ---
+/**
  * Retorna o próximo dia útil a partir de uma data.
  * Se a data já for um dia útil, retorna a própria data.
  * Se for fim de semana, avança para a próxima segunda-feira.
