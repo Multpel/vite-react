@@ -144,7 +144,7 @@ const MachineForm = ({
             <input
               type="date"
               name="proximaManutencao"
-              value={formData.ultimaManutencao || ''} // Handle undefined
+              value={formData.proximaManutencao || ''} // Handle undefined
               onChange={handleChange}
               readOnly={true}
               className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
