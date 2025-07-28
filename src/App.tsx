@@ -1,8 +1,7 @@
 import { useState, useEffect, ChangeEvent } from 'react';
-import { Calendar, Settings, Search, Plus } from 'lucide-react'; // 'Upload' removido
+import { Calendar, Settings, Search, Plus } from 'lucide-react';
 import { db } from './firebase-config';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-// import { initialMachines } from './Data/initialMachines'; // Não é mais necessário se handlePopulateDatabase for removido completamente
 
 // --- 1. DEFINIÇÕES DE TIPOS E INTERFACES ---
 interface TabButtonProps {
@@ -24,6 +23,39 @@ type Machine = {
   dataRealizacao?: string;
   status: 'pendente' | 'agendado' | 'concluido';
 };
+
+// --- FUNÇÕES AUXILIARES PARA VERIFICAR DIA ÚTIL ---
+/**
+ * Verifica se uma data é um dia útil (segunda a sexta).
+ * @param date O objeto Date a ser verificado.
+ * @returns true se for dia útil, false caso contrário.
+ */
+const isBusinessDay = (date: Date): boolean => {
+  const day = date.getDay(); // 0 = Domingo, 1 = Segunda, ..., 6 = Sábado
+  return day !== 0 && day !== 6; // Não é domingo (0) nem sábado (6)
+};
+
+/**
+ * Retorna o próximo dia útil a partir de uma data.
+ * Se a data já for um dia útil, retorna a própria data.
+ * Se for fim de semana, avança para a próxima segunda-feira.
+ * @param date O objeto Date inicial.
+ * @returns O objeto Date correspondente ao próximo dia útil.
+ */
+const getNextBusinessDay = (date: Date): Date => {
+  const newDate = new Date(date.getTime()); // Cria uma cópia para não modificar o original
+  let day = newDate.getDay();
+
+  // Se for sábado (6), adiciona 2 dias para chegar na segunda
+  // Se for domingo (0), adiciona 1 dia para chegar na segunda
+  if (day === 6) { // Sábado
+    newDate.setDate(newDate.getDate() + 2);
+  } else if (day === 0) { // Domingo
+    newDate.setDate(newDate.getDate() + 1);
+  }
+  return newDate;
+};
+
 
 // --- 2. COMPONENTES AUXILIARES ---
 const TabButton = ({
@@ -145,8 +177,7 @@ const MachineForm = ({
               type="date"
               name="proximaManutencao"
               value={formData.proximaManutencao || ''} // Handle undefined
-              onChange={handleChange}
-              readOnly={true}
+              readOnly={true} // Mantido readOnly como combinado
               className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
             />
           </div>
@@ -433,7 +464,6 @@ const MaintenanceApp = () => {
   const [showNewAppointmentForm, setShowNewAppointmentForm] = useState(false);
   const [showCompletionForm, setShowCompletionForm] = useState<Machine | null>(null);
   const [showEditAppointmentForm, setShowEditAppointmentForm] = useState<Machine | null>(null);
-  // const [isPopulating, setIsPopulating] = useState(false); // Não é mais necessário
 
   const currentDayString = new Date().toISOString().split('T')[0];
 
@@ -471,68 +501,6 @@ const MaintenanceApp = () => {
 
   fetchMachines();
 }, [currentDayString]);
-
-// --- FUNÇÃO handlePopulateDatabase REMOVIDA OU COMENTADA ---
-/*
-const handlePopulateDatabase = async () => {
-    if (isPopulating) {
-        console.warn("[DEBUG] População já em andamento.");
-        return;
-    }
-
-    const confirmPopulate = window.confirm(
-        "ATENÇÃO: Isso irá adicionar todas as máquinas iniciais ao Firestore. Somente use se o banco estiver vazio ou se você desejar adicionar DUPLICATAS. Deseja continuar?"
-    );
-
-    if (!confirmPopulate) {
-        return;
-    }
-
-    setIsPopulating(true);
-    try {
-        console.log("[DEBUG] Iniciando população manual do banco de dados...");
-        const machinesCollection = collection(db, 'machines');
-        let countAdded = 0;
-
-        for (const machine of initialMachines) {
-            try {
-                await addDoc(machinesCollection, machine);
-                countAdded++;
-                console.log(`✅ [DEBUG] Máquina adicionada: ${machine.maquina} (Total: ${countAdded})`);
-            } catch (addError) {
-                console.error(`❌ [DEBUG] Erro ao adicionar máquina ${machine.maquina}:`, addError);
-            }
-        }
-        console.log(`🏁 [DEBUG] População manual concluída. Máquinas tentadas: ${initialMachines.length}, Máquinas adicionadas com sucesso: ${countAdded}`);
-
-        const updatedSnapshot = await getDocs(machinesCollection);
-        const machinesList = updatedSnapshot.docs.map(doc => {
-          const data = doc.data();
-          const status: 'pendente' | 'agendado' | 'concluido' = data.dataRealizacao
-            ? 'concluido'
-            : data.proximaManutencao
-            ? new Date(data.proximaManutencao) < new Date(currentDayString)
-              ? 'pendente'
-              : 'agendado'
-            : 'pendente';
-
-          return {
-            id: doc.id,
-            ...data,
-            status,
-          } as Machine;
-        });
-        setMachines(machinesList);
-        alert(`População concluída! ${countAdded} máquinas adicionadas.`);
-
-    } catch (error) {
-        console.error("🔥 [DEBUG] Erro fatal durante a população manual:", error);
-        alert("Erro durante a população. Verifique o console.");
-    } finally {
-        setIsPopulating(false);
-    }
-};
-*/
 
   const filteredEquipamentos = machines.filter((m) => {
     const matchSearch =
@@ -588,10 +556,9 @@ const handlePopulateDatabase = async () => {
       chamado: lastCompletedMaintenance ? lastCompletedMaintenance.chamado : machineToEdit.chamado
     };
 
-    // --- LINHAS QUE ESTAVAM FALTANDO/DESLOCADAS ---
-    setEditingMachine(machineWithLastChamado); // **Adicione ou reposicione esta linha**
-    setShowMachineForm(true);                 // **Adicione ou reposicione esta linha**
-  }; // **CHAVE DE FECHAMENTO QUE ESTAVA FALTANDO PARA handleEdit**
+    setEditingMachine(machineWithLastChamado);
+    setShowMachineForm(true);
+  };
 
   const handleDelete = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir este equipamento?')) {
@@ -685,10 +652,14 @@ const handleCompleteMaintenance = async (
       const completedMachine = machines.find(m => m.id === id);
 
       if (completedMachine && newDateRealizacao) {
-        const completedDateObj = new Date(newDateRealizacao);
-        completedDateObj.setDate(completedDateObj.getDate() + 90);
+        let calculatedNextMaintenanceDateObj = new Date(newDateRealizacao);
+        calculatedNextMaintenanceDateObj.setDate(calculatedNextMaintenanceDateObj.getDate() + 90);
 
-        const nextMaintenanceDate = completedDateObj.toISOString().split('T')[0];
+        // --- NOVO: Verificação e ajuste para dia útil ---
+        calculatedNextMaintenanceDateObj = getNextBusinessDay(calculatedNextMaintenanceDateObj);
+        // --- FIM NOVO ---
+
+        const nextMaintenanceDate = calculatedNextMaintenanceDateObj.toISOString().split('T')[0];
 
         const newCycleStatus: 'pendente' | 'agendado' | 'concluido' =
           new Date(nextMaintenanceDate) < new Date(currentDayString) ? 'pendente' : 'agendado';
@@ -697,7 +668,7 @@ const handleCompleteMaintenance = async (
           setor: completedMachine.setor,
           maquina: completedMachine.maquina,
           etiqueta: completedMachine.etiqueta,
-          chamado: '',
+          chamado: '', // O chamado do novo ciclo é vazio, o anterior é pego via handleEdit
           proximaManutencao: nextMaintenanceDate,
           dataRealizacao: '',
           status: newCycleStatus,
