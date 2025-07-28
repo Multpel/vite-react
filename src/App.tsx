@@ -25,17 +25,6 @@ type Machine = {
 };
 
 // --- FUNÇÕES AUXILIARES PARA VERIFICAR DIA ÚTIL ---
-/**
- * Verifica se uma data é um dia útil (segunda a sexta).
- * @param date O objeto Date a ser verificado.
- * @returns true se for dia útil, false caso contrário.
- */
-const isBusinessDay = (date: Date): boolean => {
-  const day = date.getDay(); // 0 = Domingo, 1 = Segunda, ..., 6 = Sábado
-  return day !== 0 && day !== 6; // Não é domingo (0) nem sábado (6)
-};
-
-/**
  * Retorna o próximo dia útil a partir de uma data.
  * Se a data já for um dia útil, retorna a própria data.
  * Se for fim de semana, avança para a próxima segunda-feira.
