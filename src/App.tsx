@@ -1,12 +1,12 @@
-import { useState, useEffect, ChangeEvent } from 'react';
-import { Calendar, Settings, Search, Plus, LogOut } from 'lucide-react'; // Adicionado LogOut para o Ìcone de logout
+Ôªøimport { useState, useEffect, ChangeEvent } from 'react';
+import { Calendar, Settings, Search, Plus, LogOut } from 'lucide-react'; // Adicionado LogOut para o √≠cone de logout
 import { db, auth } from './firebase-config'; // Importe 'auth'
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-import { onAuthStateChanged, signOut, User } from 'firebase/auth'; // Importe a autenticaÁ„o do Firebase
+import { onAuthStateChanged, signOut, User } from 'firebase/auth'; // Importe a autentica√ß√£o do Firebase
 
 import AuthForm from './components/AuthForm'; // Importe o componente AuthForm
 
-// --- 1. DEFINI«’ES DE TIPOS E INTERFACES ---
+// --- 1. DEFINI√á√ïES DE TIPOS E INTERFACES ---
 interface TabButtonProps {
   label: string;
   value: 'equipamentos' | 'agendadas' | 'pendentes' | 'realizadas';
@@ -27,21 +27,21 @@ type Machine = {
   status: 'pendente' | 'agendado' | 'concluido';
 };
 
-// --- FUN«’ES AUXILIARES PARA VERIFICAR DIA ⁄TIL ---
+// --- FUN√á√ïES AUXILIARES PARA VERIFICAR DIA √öTIL ---
 /**
- * Retorna o prÛximo dia ˙til a partir de uma data.
- * Se a data j· for um dia ˙til, retorna a prÛpria data.
- * Se for fim de semana, avanÁa para a prÛxima segunda-feira.
+ * Retorna o pr√≥ximo dia √∫til a partir de uma data.
+ * Se a data j√° for um dia √∫til, retorna a pr√≥pria data.
+ * Se for fim de semana, avan√ßa para a pr√≥xima segunda-feira.
  * @param date O objeto Date inicial.
- * @returns O objeto Date correspondente ao prÛximo dia ˙til.
+ * @returns O objeto Date correspondente ao pr√≥ximo dia √∫til.
  */
 const getNextBusinessDay = (date: Date): Date => {
-  const newDate = new Date(date.getTime()); // Cria uma cÛpia para n„o modificar o original
+  const newDate = new Date(date.getTime()); // Cria uma c√≥pia para n√£o modificar o original
   let day = newDate.getDay();
 
-  // Se for s·bado (6), adiciona 2 dias para chegar na segunda
+  // Se for s√°bado (6), adiciona 2 dias para chegar na segunda
   // Se for domingo (0), adiciona 1 dia para chegar na segunda
-  if (day === 6) { // S·bado
+  if (day === 6) { // S√°bado
     newDate.setDate(newDate.getDate() + 2);
   } else if (day === 0) { // Domingo
     newDate.setDate(newDate.getDate() + 1);
@@ -113,7 +113,7 @@ const MachineForm = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl p-6 w-full max-w-md">
         <h3 className="text-xl font-bold mb-4">
-          {machine ? 'Editar M·quina' : 'Nova M·quina'}
+          {machine ? 'Editar M√°quina' : 'Nova M√°quina'}
         </h3>
         <div className="space-y-4">
           <div>
@@ -133,7 +133,7 @@ const MachineForm = ({
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">M·quina</label>
+            <label className="block text-sm font-medium mb-1">M√°quina</label>
             <input
               type="text"
               name="maquina"
@@ -152,9 +152,9 @@ const MachineForm = ({
               className="w-full p-2 border rounded-lg"
             />
           </div>
-          {/* CAMPO 'Chamado' AGORA … SOMENTE LEITURA E ALIMENTADO PELO AGENDAMENTO */}
+          {/* CAMPO 'Chamado' AGORA √â SOMENTE LEITURA E ALIMENTADO PELO AGENDAMENTO */}
           <div>
-            <label className="block text-sm font-medium mb-1">⁄ltimo Chamado</label>
+            <label className="block text-sm font-medium mb-1">√öltimo Chamado</label>
             <input
               type="text"
               name="chamado"
@@ -163,9 +163,9 @@ const MachineForm = ({
               className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
             />
           </div>
-          {/* CAMPO '⁄ltima ManutenÁ„o' AGORA … SOMENTE LEITURA */}
+          {/* CAMPO '√öltima Manuten√ß√£o' AGORA √â SOMENTE LEITURA */}
           <div>
-            <label className="block text-sm font-medium mb-1">⁄ltima ManutenÁ„o</label>
+            <label className="block text-sm font-medium mb-1">√öltima Manuten√ß√£o</label>
             <input
               type="date"
               name="proximaManutencao"
@@ -174,7 +174,7 @@ const MachineForm = ({
               className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
             />
           </div>
-          {/* CAMPO 'Data RealizaÁ„o' REMOVIDO */}
+          {/* CAMPO 'Data Realiza√ß√£o' REMOVIDO */}
           <div className="flex gap-2 pt-4">
             <button
               type="button"
@@ -197,7 +197,7 @@ const MachineForm = ({
   );
 };
 
-// COMPONENTE: Formul·rio para Novo Agendamento
+// COMPONENTE: Formul√°rio para Novo Agendamento
 const AppointmentForm = ({
     machines,
     onSave,
@@ -221,7 +221,7 @@ const AppointmentForm = ({
         setError(null);
 
         if (!selectedMachineId) {
-            setError('Por favor, selecione uma m·quina.');
+            setError('Por favor, selecione uma m√°quina.');
             return;
         }
         if (!appointmentDate) {
@@ -229,7 +229,7 @@ const AppointmentForm = ({
             return;
         }
         if (new Date(appointmentDate) < new Date(today)) {
-            setError('A data de agendamento n„o pode ser no passado.');
+            setError('A data de agendamento n√£o pode ser no passado.');
             return;
         }
 
@@ -242,13 +242,13 @@ const AppointmentForm = ({
                 <h3 className="text-xl font-bold mb-4">Novo Agendamento</h3>
                 <div className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium mb-1">Selecionar M·quina</label>
+                        <label className="block text-sm font-medium mb-1">Selecionar M√°quina</label>
                         <select
                             value={selectedMachineId}
                             onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedMachineId(e.target.value)}
                             className="w-full p-2 border rounded-lg"
                         >
-                            <option value="">Selecione uma m·quina</option>
+                            <option value="">Selecione uma m√°quina</option>
                             {availableMachines.map(m => (
                                 <option key={m.id} value={m.id}>
                                     {m.maquina} ({m.setor}) - {m.etiqueta || 'Sem Etiqueta'}
@@ -291,7 +291,7 @@ const AppointmentForm = ({
     );
 };
 
-// COMPONENTE: Formul·rio para Finalizar ManutenÁ„o
+// COMPONENTE: Formul√°rio para Finalizar Manuten√ß√£o
 const CompletionForm = ({
   machineId,
   currentDateRealizacao,
@@ -314,15 +314,15 @@ const CompletionForm = ({
   const handleSubmit = () => {
     setError(null);
     if (!dateRealizacao) {
-      setError('Por favor, informe a Data de RealizaÁ„o.');
+      setError('Por favor, informe a Data de Realiza√ß√£o.');
       return;
     }
     if (new Date(dateRealizacao) > new Date(currentDateString)) {
-        setError('A Data de RealizaÁ„o n„o pode ser futura.');
+        setError('A Data de Realiza√ß√£o n√£o pode ser futura.');
         return;
     }
     if (!chamado.trim()) {
-      setError('Por favor, informe o N˙mero do Chamado.');
+      setError('Por favor, informe o N√∫mero do Chamado.');
       return;
     }
     onSave(machineId, dateRealizacao, chamado);
@@ -331,10 +331,10 @@ const CompletionForm = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl p-6 w-full max-w-md">
-        <h3 className="text-xl font-bold mb-4">Finalizar ManutenÁ„o</h3>
+        <h3 className="text-xl font-bold mb-4">Finalizar Manuten√ß√£o</h3>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Data de RealizaÁ„o</label>
+            <label className="block text-sm font-medium mb-1">Data de Realiza√ß√£o</label>
             <input
               type="date"
               value={dateRealizacao}
@@ -343,7 +343,7 @@ const CompletionForm = ({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">N∫ Chamado</label>
+            <label className="block text-sm font-medium mb-1">N¬∫ Chamado</label>
             <input
               type="text"
               value={chamado}
@@ -377,7 +377,7 @@ const CompletionForm = ({
   );
 };
 
-// NOVO COMPONENTE: Formul·rio para Editar Agendamento
+// NOVO COMPONENTE: Formul√°rio para Editar Agendamento
 const EditAppointmentForm = ({
   machineId,
   currentProximaManutencao,
@@ -401,7 +401,7 @@ const EditAppointmentForm = ({
       return;
     }
     if (new Date(newProximaManutencao) < new Date(referenceDate)) {
-        setError('A nova Data de Agendamento n„o pode ser no passado.');
+        setError('A nova Data de Agendamento n√£o pode ser no passado.');
         return;
     }
     onSave(machineId, newProximaManutencao);
@@ -458,13 +458,13 @@ const MaintenanceApp = () => {
   const [showCompletionForm, setShowCompletionForm] = useState<Machine | null>(null);
   const [showEditAppointmentForm, setShowEditAppointmentForm] = useState<Machine | null>(null);
 
-  // Estados para autenticaÁ„o
+  // Estados para autentica√ß√£o
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
 
   const currentDayString = new Date().toISOString().split('T')[0];
 
-  // Efeito para monitorar o estado de autenticaÁ„o
+  // Efeito para monitorar o estado de autentica√ß√£o
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
@@ -473,11 +473,11 @@ const MaintenanceApp = () => {
     return () => unsubscribe();
   }, []);
 
-  // --- Efeito para CARREGAR dados do Firestore (N√O POPULAR MAIS AQUI) ---
+  // --- Efeito para CARREGAR dados do Firestore (N√ÉO POPULAR MAIS AQUI) ---
  useEffect(() => {
   const fetchMachines = async () => {
-    if (!currentUser) { // SÛ busca m·quinas se houver um usu·rio logado
-      setMachines([]); // Limpa as m·quinas se n„o houver usu·rio
+    if (!currentUser) { // S√≥ busca m√°quinas se houver um usu√°rio logado
+      setMachines([]); // Limpa as m√°quinas se n√£o houver usu√°rio
       return;
     }
     try {
@@ -505,12 +505,12 @@ const MaintenanceApp = () => {
       console.log(`[DEBUG] Loaded ${machinesList.length} machines from Firestore.`);
 
     } catch (error) {
-      console.error("?? [DEBUG] Erro ao carregar m·quinas do Firestore:", error);
+      console.error("?? [DEBUG] Erro ao carregar m√°quinas do Firestore:", error);
     }
   };
 
   fetchMachines();
-}, [currentDayString, currentUser]); // Adicionado currentUser como dependÍncia
+}, [currentDayString, currentUser]); // Adicionado currentUser como depend√™ncia
 
   const filteredEquipamentos = machines.filter((m) => {
     const matchSearch =
@@ -545,12 +545,12 @@ const MaintenanceApp = () => {
   const realizadasCount = realizadas.length;
 
   const handleEdit = (machineToEdit: Machine) => { // Renomeado para clareza
-    // Encontrar a ˙ltima manutenÁ„o realizada para esta m·quina
+    // Encontrar a √∫ltima manuten√ß√£o realizada para esta m√°quina
     const lastCompletedMaintenance = machines
       .filter(m =>
-        m.maquina === machineToEdit.maquina && // Mesma m·quina
-        m.setor === machineToEdit.setor &&   // Mesmo setor (ou use etiqueta se for mais ˙nico)
-        m.dataRealizacao                     // Que tenha data de realizaÁ„o (foi concluÌda)
+        m.maquina === machineToEdit.maquina && // Mesma m√°quina
+        m.setor === machineToEdit.setor &&   // Mesmo setor (ou use etiqueta se for mais √∫nico)
+        m.dataRealizacao                     // Que tenha data de realiza√ß√£o (foi conclu√≠da)
       )
       .sort((a, b) => {
         // Ordena para encontrar a MAIS RECENTE
@@ -559,10 +559,10 @@ const MaintenanceApp = () => {
         return dateB - dateA; // Ordem decrescente (mais recente primeiro)
       })[0]; // Pega o primeiro (o mais recente)
 
-    // Cria um objeto de m·quina tempor·rio para preencher o formul·rio
+    // Cria um objeto de m√°quina tempor√°rio para preencher o formul√°rio
     const machineWithLastChamado = {
       ...machineToEdit,
-      // Se encontrou a ˙ltima manutenÁ„o concluÌda, usa o chamado dela; caso contr·rio, usa o chamado atual da m·quina sendo editada (que pode estar vazio)
+      // Se encontrou a √∫ltima manuten√ß√£o conclu√≠da, usa o chamado dela; caso contr√°rio, usa o chamado atual da m√°quina sendo editada (que pode estar vazio)
       chamado: lastCompletedMaintenance ? lastCompletedMaintenance.chamado : machineToEdit.chamado
     };
 
@@ -577,9 +577,9 @@ const MaintenanceApp = () => {
         await deleteDoc(machineDocRef);
 
         setMachines((prev) => prev.filter((machine) => machine.id !== id));
-        console.log("M·quina deletada do Firestore e do estado local com ID:", id);
+        console.log("M√°quina deletada do Firestore e do estado local com ID:", id);
       } catch (error) {
-        console.error("Erro ao deletar m·quina do Firestore:", error);
+        console.error("Erro ao deletar m√°quina do Firestore:", error);
       }
     }
   };
@@ -610,7 +610,7 @@ const handleSave = async (formData: Omit<Machine, 'id'>) => {
             m.id === editingMachine.id ? { ...m, ...formData, status: calculatedStatus } as Machine : m
           )
         );
-        console.log("M·quina atualizada no Firestore e no estado local!");
+        console.log("M√°quina atualizada no Firestore e no estado local!");
 
       } else {
         const newMachineData = {
@@ -626,12 +626,12 @@ const handleSave = async (formData: Omit<Machine, 'id'>) => {
           ...newMachineData,
         };
         setMachines((prev) => [...prev, newMachineWithId]);
-        console.log("Nova m·quina adicionada ao Firestore e ao estado local com ID:", docRef.id);
+        console.log("Nova m√°quina adicionada ao Firestore e ao estado local com ID:", docRef.id);
       }
       setShowMachineForm(false);
       setEditingMachine(null);
     } catch (error) {
-      console.error("Erro ao salvar m·quina no Firestore:", error);
+      console.error("Erro ao salvar m√°quina no Firestore:", error);
     }
   };
 
@@ -665,7 +665,7 @@ const handleCompleteMaintenance = async (
         let calculatedNextMaintenanceDateObj = new Date(newDateRealizacao);
         calculatedNextMaintenanceDateObj.setDate(calculatedNextMaintenanceDateObj.getDate() + 90);
 
-        // --- NOVO: VerificaÁ„o e ajuste para dia ˙til ---
+        // --- NOVO: Verifica√ß√£o e ajuste para dia √∫til ---
         calculatedNextMaintenanceDateObj = getNextBusinessDay(calculatedNextMaintenanceDateObj);
         // --- FIM NOVO ---
 
@@ -678,7 +678,7 @@ const handleCompleteMaintenance = async (
           setor: completedMachine.setor,
           maquina: completedMachine.maquina,
           etiqueta: completedMachine.etiqueta,
-          chamado: '', // O chamado do novo ciclo È vazio, o anterior È pego via handleEdit
+          chamado: '', // O chamado do novo ciclo √© vazio, o anterior √© pego via handleEdit
           proximaManutencao: nextMaintenanceDate,
           dataRealizacao: '',
           status: newCycleStatus,
@@ -706,13 +706,13 @@ const handleCompleteMaintenance = async (
         updatedMachines = [...updatedMachines, newCycleMachineWithId];
 
         setMachines(updatedMachines);
-        console.log("ManutenÁ„o concluÌda e novo ciclo criado no Firestore e do estado local. ID original:", id, "Novo ciclo ID:", newDocRef.id);
+        console.log("Manuten√ß√£o conclu√≠da e novo ciclo criado no Firestore e do estado local. ID original:", id, "Novo ciclo ID:", newDocRef.id);
 
       } else {
-        console.warn("M·quina n„o encontrada ou data de realizaÁ„o n„o fornecida para completar manutenÁ„o.");
+        console.warn("M√°quina n√£o encontrada ou data de realiza√ß√£o n√£o fornecida para completar manuten√ß√£o.");
       }
     } catch (error) {
-      console.error("Erro ao finalizar manutenÁ„o ou criar novo ciclo no Firestore:", error);
+      console.error("Erro ao finalizar manuten√ß√£o ou criar novo ciclo no Firestore:", error);
     } finally {
       setShowCompletionForm(null);
     }
@@ -797,24 +797,24 @@ const handleCompleteMaintenance = async (
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      console.log("Usu·rio desconectado!");
+      console.log("Usu√°rio desconectado!");
     } catch (error) {
       console.error("Erro ao desconectar:", error);
     }
   };
 
-  // Esta funÁ„o ser· passada para AuthForm
+  // Esta fun√ß√£o ser√° passada para AuthForm
   const handleAuthSuccess = () => {
-    console.log("AutenticaÁ„o bem-sucedida. O App.tsx ir· reagir ‡ mudanÁa de currentUser.");
-    // N„o precisamos fazer nada aqui diretamente, pois o onAuthStateChanged j· atualiza currentUser
-    // e o componente App.tsx renderiza a interface principal quando currentUser n„o È null.
+    console.log("Autentica√ß√£o bem-sucedida. O App.tsx ir√° reagir √† mudan√ßa de currentUser.");
+    // N√£o precisamos fazer nada aqui diretamente, pois o onAuthStateChanged j√° atualiza currentUser
+    // e o componente App.tsx renderiza a interface principal quando currentUser n√£o √© null.
   };
 
-  // Renderiza o AuthForm se n„o houver usu·rio logado e n„o estiver carregando
+  // Renderiza o AuthForm se n√£o houver usu√°rio logado e n√£o estiver carregando
   if (loadingAuth) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <p className="text-xl font-semibold">Carregando autenticaÁ„o...</p>
+        <p className="text-xl font-semibold">Carregando autentica√ß√£o...</p>
       </div>
     );
   }
@@ -826,7 +826,7 @@ const handleCompleteMaintenance = async (
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      {/* ALTERA«√O: Padding responsivo para o container principal */}
+      {/* ALTERA√á√ÉO: Padding responsivo para o container principal */}
       <div className="container mx-auto px-2 sm:px-4 md:px-8 py-8">
         <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 md:p-8 mb-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6">
@@ -836,9 +836,9 @@ const handleCompleteMaintenance = async (
               </div>
               <div>
                 <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800">
-                  Controle de ManutenÁ„o
+                  Controle de Manuten√ß√£o
                 </h1>
-                <p className="text-sm sm:text-base text-gray-600">VisualizaÁ„o por Status</p>
+                <p className="text-sm sm:text-base text-gray-600">Visualiza√ß√£o por Status</p>
                 {currentUser && (
                   <p className="text-xs text-gray-500 mt-1">
                     Logado como: {currentUser.email}
@@ -856,7 +856,7 @@ const handleCompleteMaintenance = async (
                       className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl flex items-center justify-center gap-1 sm:gap-2 text-sm sm:text-base w-full sm:w-auto"
                   >
                       <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-                      Nova M·quina
+                      Nova M√°quina
                   </button>
               )}
               {tab === 'agendadas' && (
@@ -868,7 +868,7 @@ const handleCompleteMaintenance = async (
                   Novo Agendamento
                 </button>
               )}
-              {/* Bot„o de Logout */}
+              {/* Bot√£o de Logout */}
               <button
                 onClick={handleSignOut}
                 className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl flex items-center justify-center gap-1 sm:gap-2 text-sm sm:text-base w-full sm:w-auto"
@@ -892,7 +892,7 @@ const handleCompleteMaintenance = async (
                 <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Buscar por m·quina ou etiqueta..."
+                  placeholder="Buscar por m√°quina ou etiqueta..."
                   className="w-full pl-10 pr-4 py-3 border rounded-xl"
                   value={searchTerm}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
@@ -917,31 +917,31 @@ const handleCompleteMaintenance = async (
             <table className="min-w-full text-xs sm:text-sm">
               <thead>
                 <tr className="bg-gray-100 text-left">
-                  {/* ALTERA«√O: Usando tern·rio para garantir que sempre h· um retorno JSX ou null */}
+                  {/* ALTERA√á√ÉO: Usando tern√°rio para garantir que sempre h√° um retorno JSX ou null */}
                   {tab === 'equipamentos' ? (
                     <>
                       <th className="p-2">Setor</th>
-                      <th className="p-2">M·quina</th>
+                      <th className="p-2">M√°quina</th>
                       <th className="p-2">Etiqueta</th>
-                      <th className="p-2 text-right">AÁıes</th>
+                      <th className="p-2 text-right">A√ß√µes</th>
                     </>
                   ) : tab === 'agendadas' ? (
                     <>
                       <th className="p-2">Data Agendamento</th>
-                      <th className="p-2">M·quina</th>
-                      <th className="p-2">Data RealizaÁ„o</th>
+                      <th className="p-2">M√°quina</th>
+                      <th className="p-2">Data Realiza√ß√£o</th>
                     </>
                   ) : tab === 'pendentes' ? (
                     <>
                       <th className="p-2">Data Agendamento</th>
-                      <th className="p-2">M·quina</th>
-                      <th className="p-2">Data RealizaÁ„o</th>
+                      <th className="p-2">M√°quina</th>
+                      <th className="p-2">Data Realiza√ß√£o</th>
                     </>
                   ) : tab === 'realizadas' ? (
                     <>
                       <th className="p-2">Data Agendamento</th>
-                      <th className="p-2">Data RealizaÁ„o</th>
-                      <th className="p-2">M·quina</th>
+                      <th className="p-2">Data Realiza√ß√£o</th>
+                      <th className="p-2">M√°quina</th>
                       <th className="p-2">Status</th>
                     </>
                   ) : null}
@@ -954,7 +954,7 @@ const handleCompleteMaintenance = async (
                   realizadas
                 ).map((m) => (
                   <tr key={m.id} className="border-b hover:bg-gray-50">
-                    {/* ALTERA«√O: Usando tern·rio para garantir que sempre h· um retorno JSX ou null para as cÈlulas */}
+                    {/* ALTERA√á√ÉO: Usando tern√°rio para garantir que sempre h√° um retorno JSX ou null para as c√©lulas */}
                     {tab === 'equipamentos' ? (
                       <>
                         <td className="p-2">{m.setor}</td>
@@ -972,7 +972,7 @@ const handleCompleteMaintenance = async (
                             onClick={() => setShowEditAppointmentForm(m)}
                             className="cursor-pointer hover:bg-gray-100 p-1 rounded-md block"
                           >
-                            {m.proximaManutencao || 'ó'}
+                            {m.proximaManutencao || '‚Äî'}
                           </span>
                         </td>
                         <td className="p-2">
@@ -984,7 +984,7 @@ const handleCompleteMaintenance = async (
                             onClick={() => startCompletion(m)}
                             className="cursor-pointer hover:bg-gray-100 p-1 rounded-md block"
                           >
-                            {m.dataRealizacao || 'ó'}
+                            {m.dataRealizacao || '‚Äî'}
                           </span>
                         </td>
                       </>
@@ -1000,13 +1000,13 @@ const handleCompleteMaintenance = async (
                             onClick={() => startCompletion(m)}
                             className="cursor-pointer hover:bg-gray-100 p-1 rounded-md block"
                           >
-                            {m.dataRealizacao || 'ó'}
+                            {m.dataRealizacao || '‚Äî'}
                           </span>
                         </td>
                       </>
                     ) : tab === 'realizadas' ? (
                       <>
-                        <td className="p-2">{m.proximaManutencao || 'ó'}</td>
+                        <td className="p-2">{m.proximaManutencao || '‚Äî'}</td>
                         <td className="p-2">{m.dataRealizacao}</td>
                         <td className="p-2">
                             {m.maquina}
