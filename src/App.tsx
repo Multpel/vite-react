@@ -370,9 +370,6 @@ const EditAppointmentForm = ({
   const [newProximaManutencao, setNewProximaManutencao] = useState(currentProximaManutencao);
   const [error, setError] = useState<string | null>(null);
 
-  // Removido: const currentDateString = new Date().toISOString().split('T')[0];
-  // Esta linha foi removida pois 'referenceDate' já é passada via props e é utilizada para validação.
-
   const handleSubmit = () => {
     setError(null);
     if (!newProximaManutencao) {
@@ -810,17 +807,9 @@ const handleCompleteMaintenance = async (
                 <p className="text-sm sm:text-base text-gray-600">Visualização por Status</p>
               </div>
             </div>
-            {/* BOTÃO DE POPULAÇÃO MANUAL - VISÍVEL APENAS NA ABA DE EQUIPAMENTOS */}
+            {/* BOTÃO DE POPULAÇÃO MANUAL REMOVIDO */}
             {tab === 'equipamentos' && (
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto">
-                    <button
-                        onClick={handlePopulateDatabase}
-                        disabled={isPopulating}
-                        className={`bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl flex items-center justify-center gap-1 sm:gap-2 text-sm sm:text-base ${isPopulating ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                        <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
-                        {isPopulating ? 'Populando...' : 'Popular Banco Inicial'}
-                    </button>
                     <button
                         onClick={() => {
                             setEditingMachine(null);
