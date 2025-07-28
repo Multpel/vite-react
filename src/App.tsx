@@ -370,7 +370,8 @@ const EditAppointmentForm = ({
   const [newProximaManutencao, setNewProximaManutencao] = useState(currentProximaManutencao);
   const [error, setError] = useState<string | null>(null);
 
-  const currentDateString = new Date().toISOString().split('T')[0];
+  // Removido: const currentDateString = new Date().toISOString().split('T')[0];
+  // Esta linha foi removida pois 'referenceDate' já é passada via props e é utilizada para validação.
 
   const handleSubmit = () => {
     setError(null);
