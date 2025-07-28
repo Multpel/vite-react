@@ -588,6 +588,11 @@ const handlePopulateDatabase = async () => {
       chamado: lastCompletedMaintenance ? lastCompletedMaintenance.chamado : machineToEdit.chamado
     };
 
+    // --- LINHAS QUE ESTAVAM FALTANDO/DESLOCADAS ---
+    setEditingMachine(machineWithLastChamado); // **Adicione ou reposicione esta linha**
+    setShowMachineForm(true);                 // **Adicione ou reposicione esta linha**
+  }; // **CHAVE DE FECHAMENTO QUE ESTAVA FALTANDO PARA handleEdit**
+
   const handleDelete = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir este equipamento?')) {
       try {
