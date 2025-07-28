@@ -138,13 +138,13 @@ const MachineForm = ({
               className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
             />
           </div>
-          {/* CAMPO 'Próxima Manutenção' AGORA É SOMENTE LEITURA */}
+          {/* CAMPO 'Última Manutenção' AGORA É SOMENTE LEITURA */}
           <div>
-            <label className="block text-sm font-medium mb-1">Próxima Manutenção</label>
+            <label className="block text-sm font-medium mb-1">Última Manutenção</label>
             <input
               type="date"
               name="proximaManutencao"
-              value={formData.proximaManutencao || ''} // Handle undefined
+              value={formData.ultimaManutencao || ''} // Handle undefined
               onChange={handleChange}
               readOnly={true}
               className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
