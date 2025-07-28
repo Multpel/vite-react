@@ -706,7 +706,7 @@ const handleCompleteMaintenance = async (
         updatedMachines = [...updatedMachines, newCycleMachineWithId];
 
         setMachines(updatedMachines);
-        console.log("Manutenção concluída e novo ciclo criado no Firestore e no estado local. ID original:", id, "Novo ciclo ID:", newDocRef.id);
+        console.log("Manutenção concluída e novo ciclo criado no Firestore e do estado local. ID original:", id, "Novo ciclo ID:", newDocRef.id);
 
       } else {
         console.warn("Máquina não encontrada ou data de realização não fornecida para completar manutenção.");
@@ -803,6 +803,13 @@ const handleCompleteMaintenance = async (
     }
   };
 
+  // Esta função será passada para AuthForm
+  const handleAuthSuccess = () => {
+    console.log("Autenticação bem-sucedida. O App.tsx irá reagir à mudança de currentUser.");
+    // Não precisamos fazer nada aqui diretamente, pois o onAuthStateChanged já atualiza currentUser
+    // e o componente App.tsx renderiza a interface principal quando currentUser não é null.
+  };
+
   // Renderiza o AuthForm se não houver usuário logado e não estiver carregando
   if (loadingAuth) {
     return (
@@ -813,7 +820,8 @@ const handleCompleteMaintenance = async (
   }
 
   if (!currentUser) {
-    return <AuthForm />;
+    // Passa a prop onAuthSuccess para o AuthForm
+    return <AuthForm onAuthSuccess={handleAuthSuccess} />;
   }
 
   return (
