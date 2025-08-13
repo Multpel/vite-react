@@ -9,7 +9,7 @@ import { auth } from '../firebase-config'; // Certifique-se de que 'auth' está 
  // onAuthSuccess: () => void; // Callback para quando o login/registro for bem-sucedido
 //}
 
-const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
+const AuthForm: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLogin, setIsLogin] = useState(true); // true para login, false para registro
