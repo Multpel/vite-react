@@ -456,7 +456,7 @@ const MaintenanceApp = () => {
   const [showMachineForm, setShowMachineForm] = useState(false);
   const [showNewAppointmentForm, setShowNewAppointmentForm] = useState(false);
   const [showCompletionForm, setShowCompletionForm] = useState<Machine | null>(null);
-  const [showEditAppointmentForm, setShowEditAppointmentForm] = useState<Machine | null>(null);
+  const [realizedMaintenance, setRealizedMaintenance] = useState<Machine[]>([]);
 
   // Estados para autenticação
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -474,6 +474,16 @@ const MaintenanceApp = () => {
   }, []);
 
   // --- Efeito para CARREGAR dados do Firestore (NÃO POPULAR MAIS AQUI) ---
+// Efeito para monitorar o estado de autenticação
+useEffect(() => {
+  const unsubscribe = onAuthStateChanged(auth, (user) => {
+    setCurrentUser(user);
+    setLoadingAuth(false);
+  });
+  return () => unsubscribe();
+}, []);
+
+// --- Efeito para CARREGAR dados do Firestore (NÃO POPULAR MAIS AQUI) ---
  useEffect(() => {
   const fetchMachines = async () => {
     if (!currentUser) { // Só busca máquinas se houver um usuário logado
@@ -512,6 +522,35 @@ const MaintenanceApp = () => {
   fetchMachines();
 }, [currentDayString, currentUser]); // Adicionado currentUser como dependência
 
+// NOVO useEffect para buscar o histórico de manutenções
+useEffect(() => {
+  const fetchRealizedMaintenance = async () => {
+    // Busca o histórico somente quando a aba 'realizadas' estiver ativa
+    if (tab === 'realizadas' && currentUser) {
+      try {
+        console.log("[DEBUG] Fetching realized maintenance history...");
+        const historyCollection = collection(db, 'maintenance_history');
+        const historySnapshot = await getDocs(historyCollection);
+        const historyList = historySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            status: 'concluido',
+          } as Machine;
+        });
+        // Sorteia por data de realização mais recente
+        setRealizedMaintenance(historyList.sort((a, b) => (b.dataRealizacao || '').localeCompare(a.dataRealizacao || '')));
+        console.log(`[DEBUG] Loaded ${historyList.length} realized maintenances.`);
+      } catch (error) {
+        console.error("🔥 [DEBUG] Erro ao carregar histórico de manutenções:", error);
+      }
+    }
+  };
+
+  fetchRealizedMaintenance();
+}, [tab, currentUser]); // Executa quando a aba ou o usuário logado mudam
+
   const filteredEquipamentos = machines.filter((m) => {
     const matchSearch =
       m.maquina.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -534,8 +573,8 @@ const MaintenanceApp = () => {
       new Date(m.proximaManutencao) < new Date(currentDayString)
   ).sort((a, b) => (a.proximaManutencao || '').localeCompare(b.proximaManutencao || ''));
 
-  const realizadas = machines.filter((m) => m.dataRealizacao)
-    .sort((a, b) => (b.dataRealizacao || '').localeCompare(a.dataRealizacao || ''));
+  const realizadas = realizedMaintenance;
+  const realizadasCount = realizedMaintenance.length;
 
   const sectors = [...new Set(machines.map((m) => m.setor))].sort();
 
@@ -646,73 +685,60 @@ const handleCompleteMaintenance = async (
   ) => {
     try {
       const machineDocRef = doc(db, 'machines', id);
-      const dataToUpdate: {
-        dataRealizacao: string;
-        chamado: string;
-        status: 'concluido';
-        timestampConclusao: Date;
-      } = {
-        dataRealizacao: newDateRealizacao,
+      const machineToUpdate = machines.find(m => m.id === id);
+
+      if (!machineToUpdate) {
+        console.error("Máquina não encontrada para concluir manutenção.");
+        return;
+      }
+
+      // --- Passo 1: SALVAR O REGISTRO DO HISTÓRICO na nova coleção 'maintenance_history' ---
+      const historyData = {
+        machineId: id,
+        setor: machineToUpdate.setor,
+        maquina: machineToUpdate.maquina,
+        etiqueta: machineToUpdate.etiqueta,
         chamado: newChamado,
-        status: 'concluido',
+        dataRealizacao: newDateRealizacao,
+        proximaManutencao: machineToUpdate.proximaManutencao, // Agendamento original para histórico
         timestampConclusao: new Date(),
       };
+      await addDoc(collection(db, 'maintenance_history'), historyData);
+      console.log("Histórico de manutenção salvo com sucesso!");
+
+      // --- Passo 2: ATUALIZAR O REGISTRO DA MÁQUINA para o próximo ciclo ---
+      // 1. Calcula a data da próxima manutenção (90 dias a partir da data de realização)
+      let calculatedNextMaintenanceDateObj = new Date(newDateRealizacao);
+      calculatedNextMaintenanceDateObj.setDate(calculatedNextMaintenanceDateObj.getDate() + 90);
+      calculatedNextMaintenanceDateObj = getNextBusinessDay(calculatedNextMaintenanceDateObj);
+      const nextMaintenanceDate = calculatedNextMaintenanceDateObj.toISOString().split('T')[0];
+
+      const newStatus: 'pendente' | 'agendado' | 'concluido' =
+        new Date(nextMaintenanceDate) < new Date(currentDayString) ? 'pendente' : 'agendado';
+
+      // 2. Prepara os dados para ATUALIZAR o registro existente
+      const dataToUpdate = {
+        proximaManutencao: nextMaintenanceDate,
+        dataRealizacao: '', // Limpa o campo para o novo ciclo
+        chamado: '', // Limpa o chamado para o novo ciclo
+        status: newStatus,
+        timestampUltimaAtualizacao: new Date(),
+      };
+
+      // 3. ATUALIZA o documento no Firestore
       await updateDoc(machineDocRef, dataToUpdate);
 
-      const completedMachine = machines.find(m => m.id === id);
+      // 4. Atualiza o estado local para refletir a mudança
+      setMachines((prev) =>
+        prev.map((m) =>
+          m.id === id ? { ...m, ...dataToUpdate } as Machine : m
+        )
+      );
 
-      if (completedMachine && newDateRealizacao) {
-        let calculatedNextMaintenanceDateObj = new Date(newDateRealizacao);
-        calculatedNextMaintenanceDateObj.setDate(calculatedNextMaintenanceDateObj.getDate() + 90);
+      console.log("Registro da máquina atualizado para o próximo ciclo. ID:", id);
 
-        // --- NOVO: Verificação e ajuste para dia útil ---
-        calculatedNextMaintenanceDateObj = getNextBusinessDay(calculatedNextMaintenanceDateObj);
-        // --- FIM NOVO ---
-
-        const nextMaintenanceDate = calculatedNextMaintenanceDateObj.toISOString().split('T')[0];
-
-        const newCycleStatus: 'pendente' | 'agendado' | 'concluido' =
-          new Date(nextMaintenanceDate) < new Date(currentDayString) ? 'pendente' : 'agendado';
-
-        const newCycleMachineData = {
-          setor: completedMachine.setor,
-          maquina: completedMachine.maquina,
-          etiqueta: completedMachine.etiqueta,
-          chamado: '', // O chamado do novo ciclo é vazio, o anterior é pego via handleEdit
-          proximaManutencao: nextMaintenanceDate,
-          dataRealizacao: '',
-          status: newCycleStatus,
-          timestampCriacaoCiclo: new Date(),
-        };
-
-        const newDocRef = await addDoc(collection(db, 'machines'), newCycleMachineData);
-
-        let updatedMachines = machines.map((machine) => {
-          if (machine.id === id) {
-            return {
-              ...machine,
-              dataRealizacao: newDateRealizacao,
-              chamado: newChamado,
-              status: 'concluido',
-            } as Machine;
-          }
-          return machine;
-        });
-
-        const newCycleMachineWithId: Machine = {
-          id: newDocRef.id,
-          ...newCycleMachineData,
-        };
-        updatedMachines = [...updatedMachines, newCycleMachineWithId];
-
-        setMachines(updatedMachines);
-        console.log("Manutenção concluída e novo ciclo criado no Firestore e do estado local. ID original:", id, "Novo ciclo ID:", newDocRef.id);
-
-      } else {
-        console.warn("Máquina não encontrada ou data de realização não fornecida para completar manutenção.");
-      }
     } catch (error) {
-      console.error("Erro ao finalizar manutenção ou criar novo ciclo no Firestore:", error);
+      console.error("Erro ao finalizar manutenção ou criar histórico:", error);
     } finally {
       setShowCompletionForm(null);
     }
