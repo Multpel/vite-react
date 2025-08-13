@@ -3,16 +3,12 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from 'firebase/auth';
-import { auth } from '../firebase-config'; // Certifique-se de que 'auth' está exportado em firebase-config.ts
-
-//interface AuthFormProps {
- // onAuthSuccess: () => void; // Callback para quando o login/registro for bem-sucedido
-//}
+import { auth } from '../firebase-config';
 
 const AuthForm: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLogin, setIsLogin] = useState(true); // true para login, false para registro
+  const [isLogin, setIsLogin] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -29,7 +25,7 @@ const AuthForm: React.FC = () => {
         await createUserWithEmailAndPassword(auth, email, password);
         console.log('Registro bem-sucedido!');
       }
-      onAuthSuccess(); // Chame o callback de sucesso
+      // A chamada 'onAuthSuccess()' foi removida daqui, pois não é mais necessária.
     } catch (err: any) {
       console.error('Erro de autenticação:', err);
       // Tratamento de erros comuns do Firebase Authentication
