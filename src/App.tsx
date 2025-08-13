@@ -1,10 +1,10 @@
 ﻿import { useState, useEffect, ChangeEvent } from 'react';
-import { Calendar, Settings, Search, Plus, LogOut } from 'lucide-react'; // Adicionado LogOut para o ícone de logout
-import { db, auth } from './firebase-config'; // Importe 'auth'
+import { Calendar, Settings, Search, Plus, LogOut, Edit } from 'lucide-react';
+import { db, auth } from './firebase-config';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-import { onAuthStateChanged, signOut, User } from 'firebase/auth'; // Importe a autenticação do Firebase
+import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 
-import AuthForm from './components/AuthForm'; // Importe o componente AuthForm
+import AuthForm from './components/AuthForm';
 
 // --- 1. DEFINIÇÕES DE TIPOS E INTERFACES ---
 interface TabButtonProps {
@@ -28,22 +28,13 @@ type Machine = {
 };
 
 // --- FUNÇÕES AUXILIARES PARA VERIFICAR DIA ÚTIL ---
-/**
- * Retorna o próximo dia útil a partir de uma data.
- * Se a data já for um dia útil, retorna a própria data.
- * Se for fim de semana, avança para a próxima segunda-feira.
- * @param date O objeto Date inicial.
- * @returns O objeto Date correspondente ao próximo dia útil.
- */
 const getNextBusinessDay = (date: Date): Date => {
-  const newDate = new Date(date.getTime()); // Cria uma cópia para não modificar o original
+  const newDate = new Date(date.getTime());
   let day = newDate.getDay();
 
-  // Se for sábado (6), adiciona 2 dias para chegar na segunda
-  // Se for domingo (0), adiciona 1 dia para chegar na segunda
-  if (day === 6) { // Sábado
+  if (day === 6) {
     newDate.setDate(newDate.getDate() + 2);
-  } else if (day === 0) { // Domingo
+  } else if (day === 0) {
     newDate.setDate(newDate.getDate() + 1);
   }
   return newDate;
@@ -152,7 +143,6 @@ const MachineForm = ({
               className="w-full p-2 border rounded-lg"
             />
           </div>
-          {/* CAMPO 'Chamado' AGORA É SOMENTE LEITURA E ALIMENTADO PELO AGENDAMENTO */}
           <div>
             <label className="block text-sm font-medium mb-1">Último Chamado</label>
             <input
@@ -163,18 +153,16 @@ const MachineForm = ({
               className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
             />
           </div>
-          {/* CAMPO 'Última Manutenção' AGORA É SOMENTE LEITURA */}
           <div>
             <label className="block text-sm font-medium mb-1">Última Manutenção</label>
             <input
               type="date"
               name="proximaManutencao"
-              value={formData.proximaManutencao || ''} // Handle undefined
-              readOnly={true} // Mantido readOnly como combinado
+              value={formData.proximaManutencao || ''}
+              readOnly={true}
               className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
             />
           </div>
-          {/* CAMPO 'Data Realização' REMOVIDO */}
           <div className="flex gap-2 pt-4">
             <button
               type="button"
@@ -197,7 +185,6 @@ const MachineForm = ({
   );
 };
 
-// COMPONENTE: Formulário para Novo Agendamento
 const AppointmentForm = ({
     machines,
     onSave,
@@ -291,7 +278,6 @@ const AppointmentForm = ({
     );
 };
 
-// COMPONENTE: Formulário para Finalizar Manutenção
 const CompletionForm = ({
   machineId,
   currentDateRealizacao,
@@ -377,7 +363,6 @@ const CompletionForm = ({
   );
 };
 
-// NOVO COMPONENTE: Formulário para Editar Agendamento
 const EditAppointmentForm = ({
   machineId,
   currentProximaManutencao,
@@ -456,6 +441,7 @@ const MaintenanceApp = () => {
   const [showMachineForm, setShowMachineForm] = useState(false);
   const [showNewAppointmentForm, setShowNewAppointmentForm] = useState(false);
   const [showCompletionForm, setShowCompletionForm] = useState<Machine | null>(null);
+  const [showEditAppointmentForm, setShowEditAppointmentForm] = useState<Machine | null>(null);
   const [realizedMaintenance, setRealizedMaintenance] = useState<Machine[]>([]);
 
   // Estados para autenticação
@@ -473,138 +459,110 @@ const MaintenanceApp = () => {
     return () => unsubscribe();
   }, []);
 
-  // --- Efeito para CARREGAR dados do Firestore (NÃO POPULAR MAIS AQUI) ---
-// Efeito para monitorar o estado de autenticação
-useEffect(() => {
-  const unsubscribe = onAuthStateChanged(auth, (user) => {
-    setCurrentUser(user);
-    setLoadingAuth(false);
-  });
-  return () => unsubscribe();
-}, []);
-
-// --- Efeito para CARREGAR dados do Firestore (NÃO POPULAR MAIS AQUI) ---
- useEffect(() => {
-  const fetchMachines = async () => {
-    if (!currentUser) { // Só busca máquinas se houver um usuário logado
-      setMachines([]); // Limpa as máquinas se não houver usuário
-      return;
-    }
-    try {
-      console.log("[DEBUG] Fetching machines from Firestore...");
-      const machinesCollection = collection(db, 'machines');
-      const machineSnapshot = await getDocs(machinesCollection);
-
-      const machinesList = machineSnapshot.docs.map(doc => {
-        const data = doc.data();
-        const status: 'pendente' | 'agendado' | 'concluido' = data.dataRealizacao
-          ? 'concluido'
-          : data.proximaManutencao
-          ? new Date(data.proximaManutencao) < new Date(currentDayString)
-            ? 'pendente'
-            : 'agendado'
-          : 'pendente';
-
-        return {
-          id: doc.id,
-          ...data,
-          status,
-        } as Machine;
-      });
-      setMachines(machinesList);
-      console.log(`[DEBUG] Loaded ${machinesList.length} machines from Firestore.`);
-
-    } catch (error) {
-      console.error("?? [DEBUG] Erro ao carregar máquinas do Firestore:", error);
-    }
-  };
-
-  fetchMachines();
-}, [currentDayString, currentUser]); // Adicionado currentUser como dependência
-
-// NOVO useEffect para buscar o histórico de manutenções
-useEffect(() => {
-  const fetchRealizedMaintenance = async () => {
-    // Busca o histórico somente quando a aba 'realizadas' estiver ativa
-    if (tab === 'realizadas' && currentUser) {
+  // Efeito para carregar dados do Firestore
+  useEffect(() => {
+    const fetchMachines = async () => {
+      if (!currentUser) {
+        setMachines([]);
+        return;
+      }
       try {
-        console.log("[DEBUG] Fetching realized maintenance history...");
-        const historyCollection = collection(db, 'maintenance_history');
-        const historySnapshot = await getDocs(historyCollection);
-        const historyList = historySnapshot.docs.map(doc => {
+        console.log("[DEBUG] Fetching machines from Firestore...");
+        const machinesCollection = collection(db, 'machines');
+        const machineSnapshot = await getDocs(machinesCollection);
+
+        const machinesList = machineSnapshot.docs.map(doc => {
           const data = doc.data();
+          const status: 'pendente' | 'agendado' | 'concluido' = data.dataRealizacao
+            ? 'concluido'
+            : data.proximaManutencao
+            ? new Date(data.proximaManutencao) < new Date(currentDayString)
+              ? 'pendente'
+              : 'agendado'
+            : 'pendente';
+
           return {
             id: doc.id,
             ...data,
-            status: 'concluido',
+            status,
           } as Machine;
         });
-        // Sorteia por data de realização mais recente
-        setRealizedMaintenance(historyList.sort((a, b) => (b.dataRealizacao || '').localeCompare(a.dataRealizacao || '')));
-        console.log(`[DEBUG] Loaded ${historyList.length} realized maintenances.`);
-      } catch (error) {
-        console.error("🔥 [DEBUG] Erro ao carregar histórico de manutenções:", error);
-      }
-    }
-  };
+        setMachines(machinesList);
+        console.log(`[DEBUG] Loaded ${machinesList.length} machines from Firestore.`);
 
-  fetchRealizedMaintenance();
-}, [tab, currentUser]); // Executa quando a aba ou o usuário logado mudam
+      } catch (error) {
+        console.error("?? [DEBUG] Erro ao carregar máquinas do Firestore:", error);
+      }
+    };
+
+    fetchMachines();
+  }, [currentDayString, currentUser]);
+
+  // NOVO useEffect para buscar o histórico de manutenções
+  useEffect(() => {
+    const fetchRealizedMaintenance = async () => {
+      if (tab === 'realizadas' && currentUser) {
+        try {
+          console.log("[DEBUG] Fetching realized maintenance history...");
+          const historyCollection = collection(db, 'maintenance_history');
+          const historySnapshot = await getDocs(historyCollection);
+          const historyList = historySnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              ...data,
+              status: 'concluido',
+            } as Machine;
+          });
+          setRealizedMaintenance(historyList.sort((a, b) => (b.dataRealizacao || '').localeCompare(a.dataRealizacao || '')));
+          console.log(`[DEBUG] Loaded ${historyList.length} realized maintenances.`);
+        } catch (error) {
+          console.error("🔥 [DEBUG] Erro ao carregar histórico de manutenções:", error);
+        }
+      }
+    };
+
+    fetchRealizedMaintenance();
+  }, [tab, currentUser]);
 
   const filteredEquipamentos = machines.filter((m) => {
-    const matchSearch =
-      m.maquina.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      m.etiqueta.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchSearch = m.maquina.toLowerCase().includes(searchTerm.toLowerCase()) || m.etiqueta.toLowerCase().includes(searchTerm.toLowerCase());
     const matchSector = !selectedSector || m.setor === selectedSector;
     return matchSearch && matchSector;
   });
 
   const agendadas = machines.filter(
-    (m) =>
-      !m.dataRealizacao &&
-      m.proximaManutencao &&
-      new Date(m.proximaManutencao) >= new Date(currentDayString)
+    (m) => !m.dataRealizacao && m.proximaManutencao && new Date(m.proximaManutencao) >= new Date(currentDayString)
   ).sort((a, b) => (a.proximaManutencao || '').localeCompare(b.proximaManutencao || ''));
 
   const pendentes = machines.filter(
-    (m) =>
-      !m.dataRealizacao &&
-      m.proximaManutencao &&
-      new Date(m.proximaManutencao) < new Date(currentDayString)
+    (m) => !m.dataRealizacao && m.proximaManutencao && new Date(m.proximaManutencao) < new Date(currentDayString)
   ).sort((a, b) => (a.proximaManutencao || '').localeCompare(b.proximaManutencao || ''));
-
-  const realizadas = realizedMaintenance;
-  const realizadasCount = realizedMaintenance.length;
 
   const sectors = [...new Set(machines.map((m) => m.setor))].sort();
 
   const equipamentosCount = filteredEquipamentos.length;
   const agendadasCount = agendadas.length;
   const pendentesCount = pendentes.length;
-  const realizadasCount = realizadas.length;
+  const realizadas = realizedMaintenance;
+  const realizadasCount = realizedMaintenance.length;
 
-  const handleEdit = (machineToEdit: Machine) => { // Renomeado para clareza
-    // Encontrar a última manutenção realizada para esta máquina
+  const handleEdit = (machineToEdit: Machine) => {
     const lastCompletedMaintenance = machines
-      .filter(m =>
-        m.maquina === machineToEdit.maquina && // Mesma máquina
-        m.setor === machineToEdit.setor &&   // Mesmo setor (ou use etiqueta se for mais único)
-        m.dataRealizacao                     // Que tenha data de realização (foi concluída)
+      .filter(m => m.maquina === machineToEdit.maquina &&
+                 m.setor === machineToEdit.setor &&
+                 m.dataRealizacao
       )
       .sort((a, b) => {
-        // Ordena para encontrar a MAIS RECENTE
         const dateA = new Date(a.dataRealizacao || '1970-01-01').getTime();
         const dateB = new Date(b.dataRealizacao || '1970-01-01').getTime();
-        return dateB - dateA; // Ordem decrescente (mais recente primeiro)
-      })[0]; // Pega o primeiro (o mais recente)
+        return dateB - dateA;
+      })[0];
 
-    // Cria um objeto de máquina temporário para preencher o formulário
     const machineWithLastChamado = {
       ...machineToEdit,
-      // Se encontrou a última manutenção concluída, usa o chamado dela; caso contrário, usa o chamado atual da máquina sendo editada (que pode estar vazio)
       chamado: lastCompletedMaintenance ? lastCompletedMaintenance.chamado : machineToEdit.chamado
     };
-
     setEditingMachine(machineWithLastChamado);
     setShowMachineForm(true);
   };
@@ -614,7 +572,6 @@ useEffect(() => {
       try {
         const machineDocRef = doc(db, 'machines', id);
         await deleteDoc(machineDocRef);
-
         setMachines((prev) => prev.filter((machine) => machine.id !== id));
         console.log("Máquina deletada do Firestore e do estado local com ID:", id);
       } catch (error) {
@@ -623,7 +580,7 @@ useEffect(() => {
     }
   };
 
-const handleSave = async (formData: Omit<Machine, 'id'>) => {
+  const handleSave = async (formData: Omit<Machine, 'id'>) => {
     try {
       const calculatedStatus: 'pendente' | 'agendado' | 'concluido' = formData.dataRealizacao
         ? 'concluido'
@@ -632,53 +589,72 @@ const handleSave = async (formData: Omit<Machine, 'id'>) => {
           ? 'pendente'
           : 'agendado'
         : 'pendente';
+  
+      const newMachineData = {
+        ...formData,
+        status: calculatedStatus,
+        timestampCriacao: new Date(),
+      };
+      
+      const newDocRef = await addDoc(collection(db, 'machines'), newMachineData);
 
-      if (editingMachine) {
-        const machineDocRef = doc(db, 'machines', editingMachine.id);
-
-        const dataToUpdate = {
-          ...formData,
-          status: calculatedStatus,
-          timestamp: new Date(),
-        };
-
-        await updateDoc(machineDocRef, dataToUpdate);
-
-        setMachines((prev) =>
-          prev.map((m) =>
-            m.id === editingMachine.id ? { ...m, ...formData, status: calculatedStatus } as Machine : m
-          )
-        );
-        console.log("Máquina atualizada no Firestore e no estado local!");
-
-      } else {
-        const newMachineData = {
-          ...formData,
-          status: calculatedStatus,
-          timestamp: new Date(),
-        };
-
-        const docRef = await addDoc(collection(db, 'machines'), newMachineData);
-
-        const newMachineWithId: Machine = {
-          id: docRef.id,
-          ...newMachineData,
-        };
-        setMachines((prev) => [...prev, newMachineWithId]);
-        console.log("Nova máquina adicionada ao Firestore e ao estado local com ID:", docRef.id);
-      }
-      setShowMachineForm(false);
-      setEditingMachine(null);
+      setMachines((prev) => [...prev, { id: newDocRef.id, ...newMachineData } as Machine]);
+      console.log("Máquina salva no Firestore com ID:", newDocRef.id);
+      
     } catch (error) {
       console.error("Erro ao salvar máquina no Firestore:", error);
+    } finally {
+      setEditingMachine(null);
+      setShowMachineForm(false);
     }
   };
 
-  const startCompletion = (machine: Machine) => {
-    setShowCompletionForm(machine);
+  const handleCreateAppointment = async (machineId: string, appointmentDate: string) => {
+    try {
+      const machineDocRef = doc(db, 'machines', machineId);
+      const dataToUpdate = {
+        proximaManutencao: appointmentDate,
+        status: new Date(appointmentDate) < new Date(currentDayString) ? 'pendente' : 'agendado',
+        timestampAgendamento: new Date(),
+      };
+      await updateDoc(machineDocRef, dataToUpdate);
+      setMachines((prev) =>
+        prev.map((m) =>
+          m.id === machineId ? { ...m, ...dataToUpdate } as Machine : m
+        )
+      );
+      console.log("Agendamento criado ou atualizado com sucesso para o ID:", machineId);
+    } catch (error) {
+      console.error("Erro ao criar agendamento:", error);
+    } finally {
+      setShowNewAppointmentForm(false);
+    }
   };
 
-const handleCompleteMaintenance = async (
+  const handleEditAppointmentDate = async (machineId: string, newProximaManutencao: string) => {
+    try {
+      const machineDocRef = doc(db, 'machines', machineId);
+      const dataToUpdate = {
+        proximaManutencao: newProximaManutencao,
+        status: new Date(newProximaManutencao) < new Date(currentDayString) ? 'pendente' : 'agendado',
+        timestampUltimaAtualizacao: new Date(),
+      };
+      await updateDoc(machineDocRef, dataToUpdate);
+
+      setMachines((prev) =>
+        prev.map((m) =>
+          m.id === machineId ? { ...m, ...dataToUpdate } as Machine : m
+        )
+      );
+      console.log("Data de agendamento atualizada com sucesso para o ID:", machineId);
+    } catch (error) {
+      console.error("Erro ao atualizar data de agendamento:", error);
+    } finally {
+      setShowEditAppointmentForm(null);
+    }
+  };
+
+  const handleCompleteMaintenance = async (
     id: string,
     newDateRealizacao: string,
     newChamado: string
@@ -692,7 +668,6 @@ const handleCompleteMaintenance = async (
         return;
       }
 
-      // --- Passo 1: SALVAR O REGISTRO DO HISTÓRICO na nova coleção 'maintenance_history' ---
       const historyData = {
         machineId: id,
         setor: machineToUpdate.setor,
@@ -700,14 +675,12 @@ const handleCompleteMaintenance = async (
         etiqueta: machineToUpdate.etiqueta,
         chamado: newChamado,
         dataRealizacao: newDateRealizacao,
-        proximaManutencao: machineToUpdate.proximaManutencao, // Agendamento original para histórico
+        proximaManutencao: machineToUpdate.proximaManutencao,
         timestampConclusao: new Date(),
       };
       await addDoc(collection(db, 'maintenance_history'), historyData);
       console.log("Histórico de manutenção salvo com sucesso!");
 
-      // --- Passo 2: ATUALIZAR O REGISTRO DA MÁQUINA para o próximo ciclo ---
-      // 1. Calcula a data da próxima manutenção (90 dias a partir da data de realização)
       let calculatedNextMaintenanceDateObj = new Date(newDateRealizacao);
       calculatedNextMaintenanceDateObj.setDate(calculatedNextMaintenanceDateObj.getDate() + 90);
       calculatedNextMaintenanceDateObj = getNextBusinessDay(calculatedNextMaintenanceDateObj);
@@ -716,19 +689,16 @@ const handleCompleteMaintenance = async (
       const newStatus: 'pendente' | 'agendado' | 'concluido' =
         new Date(nextMaintenanceDate) < new Date(currentDayString) ? 'pendente' : 'agendado';
 
-      // 2. Prepara os dados para ATUALIZAR o registro existente
       const dataToUpdate = {
         proximaManutencao: nextMaintenanceDate,
-        dataRealizacao: '', // Limpa o campo para o novo ciclo
-        chamado: '', // Limpa o chamado para o novo ciclo
+        dataRealizacao: '',
+        chamado: '',
         status: newStatus,
         timestampUltimaAtualizacao: new Date(),
       };
 
-      // 3. ATUALIZA o documento no Firestore
       await updateDoc(machineDocRef, dataToUpdate);
 
-      // 4. Atualiza o estado local para refletir a mudança
       setMachines((prev) =>
         prev.map((m) =>
           m.id === id ? { ...m, ...dataToUpdate } as Machine : m
@@ -744,355 +714,251 @@ const handleCompleteMaintenance = async (
     }
   };
 
-  const handleEditAppointmentDate = async (
-    id: string,
-    newProximaManutencao: string
-  ) => {
-    try {
-      const machineDocRef = doc(db, 'machines', id);
-
-      const newStatus: 'pendente' | 'agendado' | 'concluido' =
-        new Date(newProximaManutencao) < new Date(currentDayString) ? 'pendente' : 'agendado';
-
-      const dataToUpdate = {
-        proximaManutencao: newProximaManutencao,
-        status: newStatus,
-        timestampUltimaAtualizacao: new Date(),
-      };
-
-      await updateDoc(machineDocRef, dataToUpdate);
-
-      setMachines((prevMachines) => {
-        return prevMachines.map((machine) => {
-          if (machine.id === id) {
-            return {
-              ...machine,
-              ...dataToUpdate,
-            } as Machine;
-          }
-          return machine;
-        });
-      });
-      console.log("Data de agendamento atualizada no Firestore e no estado local. ID:", id);
-    } catch (error) {
-      console.error("Erro ao editar data de agendamento no Firestore:", error);
-    } finally {
-      setShowEditAppointmentForm(null);
-    }
-  };
-
-
-  const handleNewAppointmentSave = async (
-    machineId: string,
-    appointmentDate: string
-  ) => {
-    try {
-      const machineDocRef = doc(db, 'machines', machineId);
-
-      const newStatus: 'pendente' | 'agendado' | 'concluido' =
-        new Date(appointmentDate) < new Date(currentDayString) ? 'pendente' : 'agendado';
-
-      const dataToUpdate = {
-        proximaManutencao: appointmentDate,
-        status: newStatus,
-        dataRealizacao: '',
-        timestampUltimaAtualizacao: new Date(),
-      };
-
-      await updateDoc(machineDocRef, dataToUpdate);
-
-      setMachines((prevMachines) => {
-        return prevMachines.map((m) => {
-          if (m.id === machineId) {
-            return {
-              ...m,
-              ...dataToUpdate,
-            } as Machine;
-          }
-          return m;
-        });
-      });
-      console.log("Novo agendamento salvo no Firestore e no estado local para ID:", machineId);
-    } catch (error) {
-      console.error("Erro ao salvar novo agendamento no Firestore:", error);
-    } finally {
-      setShowNewAppointmentForm(false);
-    }
-  };
-
-  const handleSignOut = async () => {
+  const handleLogout = async () => {
     try {
       await signOut(auth);
-      console.log("Usuário desconectado!");
+      console.log("Usuário desconectado.");
     } catch (error) {
-      console.error("Erro ao desconectar:", error);
+      console.error("Erro ao fazer logout:", error);
     }
   };
 
-  // Esta função será passada para AuthForm
-  const handleAuthSuccess = () => {
-    console.log("Autenticação bem-sucedida. O App.tsx irá reagir à mudança de currentUser.");
-    // Não precisamos fazer nada aqui diretamente, pois o onAuthStateChanged já atualiza currentUser
-    // e o componente App.tsx renderiza a interface principal quando currentUser não é null.
-  };
-
-  // Renderiza o AuthForm se não houver usuário logado e não estiver carregando
   if (loadingAuth) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <p className="text-xl font-semibold">Carregando autenticação...</p>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
       </div>
     );
   }
 
   if (!currentUser) {
-    // Passa a prop onAuthSuccess para o AuthForm
-    return <AuthForm onAuthSuccess={handleAuthSuccess} />;
+    return <AuthForm />;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      {/* ALTERAÇÃO: Padding responsivo para o container principal */}
-      <div className="container mx-auto px-2 sm:px-4 md:px-8 py-8">
-        <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 md:p-8 mb-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6">
-            <div className="flex items-center gap-2 sm:gap-4 mb-4 sm:mb-0">
-              <div className="bg-blue-600 p-2 sm:p-3 rounded-xl">
-                <Settings className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800">
-                  Controle de Manutenção
-                </h1>
-                <p className="text-sm sm:text-base text-gray-600">Visualização por Status</p>
-                {currentUser && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    Logado como: {currentUser.email}
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-2 sm:gap-4">
-              {tab === 'equipamentos' && (
-                  <button
-                      onClick={() => {
-                          setEditingMachine(null);
-                          setShowMachineForm(true);
-                      }}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl flex items-center justify-center gap-1 sm:gap-2 text-sm sm:text-base w-full sm:w-auto"
-                  >
-                      <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-                      Nova Máquina
-                  </button>
-              )}
-              {tab === 'agendadas' && (
-                <button
-                  onClick={() => setShowNewAppointmentForm(true)}
-                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl flex items-center justify-center gap-1 sm:gap-2 text-sm sm:text-base w-full sm:w-auto"
-                >
-                  <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
-                  Novo Agendamento
-                </button>
-              )}
-              {/* Botão de Logout */}
-              <button
-                onClick={handleSignOut}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl flex items-center justify-center gap-1 sm:gap-2 text-sm sm:text-base w-full sm:w-auto"
-              >
-                <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
-                Sair
-              </button>
-            </div>
+    <div className="min-h-screen bg-gray-100 p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto">
+        <header className="flex flex-col sm:flex-row justify-between items-center bg-white p-4 rounded-xl shadow mb-4">
+          <div className="flex items-center mb-4 sm:mb-0">
+            <h1 className="text-2xl font-bold text-gray-800">Manutenção Preventiva</h1>
           </div>
-
-          <div className="flex flex-wrap justify-center sm:justify-start gap-2 sm:gap-4 mb-8 overflow-x-auto pb-2 custom-scrollbar">
-            <TabButton label="Equipamentos" value="equipamentos" current={tab} setTab={setTab} count={equipamentosCount} activeColorClass="bg-blue-600" />
-            <TabButton label="Agendadas" value="agendadas" current={tab} setTab={setTab} count={agendadasCount} activeColorClass="bg-purple-600" />
-            <TabButton label="Pendentes" value="pendentes" current={tab} setTab={setTab} count={pendentesCount} activeColorClass="bg-orange-600" />
-            <TabButton label="Realizadas" value="realizadas" current={tab} setTab={setTab} count={realizadasCount} activeColorClass="bg-green-600" />
+          <div className="flex space-x-2">
+            <button
+              onClick={() => setShowMachineForm(true)}
+              className="bg-green-600 text-white p-2 rounded-full hover:bg-green-700 transition"
+              aria-label="Adicionar Máquina"
+            >
+              <Plus size={20} />
+            </button>
+            <button
+              onClick={() => handleLogout()}
+              className="bg-red-600 text-white p-2 rounded-full hover:bg-red-700 transition"
+              aria-label="Logout"
+            >
+              <LogOut size={20} />
+            </button>
           </div>
+        </header>
 
-          {tab === 'equipamentos' && (
-            <div className="flex flex-col md:flex-row gap-4 mb-8">
-              <div className="flex-1 relative w-full md:w-auto">
-                <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+        <main>
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl shadow mb-4">
+            <div className="flex-1 w-full sm:w-auto">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                 <input
                   type="text"
-                  placeholder="Buscar por máquina ou etiqueta..."
-                  className="w-full pl-10 pr-4 py-3 border rounded-xl"
+                  placeholder="Buscar por Máquina ou Etiqueta..."
                   value={searchTerm}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
               </div>
+            </div>
+            <div className="flex-1 w-full sm:w-auto">
               <select
-                className="px-4 py-3 border rounded-xl w-full md:w-auto"
                 value={selectedSector}
-                onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedSector(e.target.value)}
+                onChange={(e) => setSelectedSector(e.target.value)}
+                className="w-full p-2 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"
               >
-                <option value="">Todos os setores</option>
-                {sectors.map((sector) => (
-                  <option key={sector} value={sector}>
-                    {sector}
+                <option value="">Todos os Setores</option>
+                {sectors.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
                   </option>
                 ))}
               </select>
             </div>
-          )}
-
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-xs sm:text-sm">
-              <thead>
-                <tr className="bg-gray-100 text-left">
-                  {/* ALTERAÇÃO: Usando ternário para garantir que sempre há um retorno JSX ou null */}
-                  {tab === 'equipamentos' ? (
-                    <>
-                      <th className="p-2">Setor</th>
-                      <th className="p-2">Máquina</th>
-                      <th className="p-2">Etiqueta</th>
-                      <th className="p-2 text-right">Ações</th>
-                    </>
-                  ) : tab === 'agendadas' ? (
-                    <>
-                      <th className="p-2">Data Agendamento</th>
-                      <th className="p-2">Máquina</th>
-                      <th className="p-2">Data Realização</th>
-                    </>
-                  ) : tab === 'pendentes' ? (
-                    <>
-                      <th className="p-2">Data Agendamento</th>
-                      <th className="p-2">Máquina</th>
-                      <th className="p-2">Data Realização</th>
-                    </>
-                  ) : tab === 'realizadas' ? (
-                    <>
-                      <th className="p-2">Data Agendamento</th>
-                      <th className="p-2">Data Realização</th>
-                      <th className="p-2">Máquina</th>
-                      <th className="p-2">Status</th>
-                    </>
-                  ) : null}
-                </tr>
-              </thead>
-              <tbody>
-                {(tab === 'equipamentos' ? filteredEquipamentos :
-                  tab === 'agendadas' ? agendadas :
-                  tab === 'pendentes' ? pendentes :
-                  realizadas
-                ).map((m) => (
-                  <tr key={m.id} className="border-b hover:bg-gray-50">
-                    {/* ALTERAÇÃO: Usando ternário para garantir que sempre há um retorno JSX ou null para as células */}
-                    {tab === 'equipamentos' ? (
-                      <>
-                        <td className="p-2">{m.setor}</td>
-                        <td className="p-2">{m.maquina}</td>
-                        <td className="p-2">{m.etiqueta}</td>
-                        <td className="p-2 text-right space-x-2">
-                          <button onClick={() => handleEdit(m)} className="text-blue-600 hover:underline">Editar</button>
-                          <button onClick={() => handleDelete(m.id)} className="text-red-600 hover:underline">Excluir</button>
-                        </td>
-                      </>
-                    ) : tab === 'agendadas' ? (
-                      <>
-                        <td className="p-2">
-                          <span
-                            onClick={() => setShowEditAppointmentForm(m)}
-                            className="cursor-pointer hover:bg-gray-100 p-1 rounded-md block"
-                          >
-                            {m.proximaManutencao || '—'}
-                          </span>
-                        </td>
-                        <td className="p-2">
-                            {m.maquina}
-                            {m.chamado && <span className="text-xs text-gray-500 block">Chamado: {m.chamado}</span>}
-                        </td>
-                        <td className="p-2">
-                          <span
-                            onClick={() => startCompletion(m)}
-                            className="cursor-pointer hover:bg-gray-100 p-1 rounded-md block"
-                          >
-                            {m.dataRealizacao || '—'}
-                          </span>
-                        </td>
-                      </>
-                    ) : tab === 'pendentes' ? (
-                      <>
-                        <td className="p-2">{m.proximaManutencao}</td>
-                        <td className="p-2">
-                            {m.maquina}
-                            {m.chamado && <span className="text-xs text-gray-500 block">Chamado: {m.chamado}</span>}
-                        </td>
-                        <td className="p-2">
-                          <span
-                            onClick={() => startCompletion(m)}
-                            className="cursor-pointer hover:bg-gray-100 p-1 rounded-md block"
-                          >
-                            {m.dataRealizacao || '—'}
-                          </span>
-                        </td>
-                      </>
-                    ) : tab === 'realizadas' ? (
-                      <>
-                        <td className="p-2">{m.proximaManutencao || '—'}</td>
-                        <td className="p-2">{m.dataRealizacao}</td>
-                        <td className="p-2">
-                            {m.maquina}
-                            {m.chamado && <span className="text-xs text-gray-500 block">Chamado: {m.chamado}</span>}
-                        </td>
-                        <td className="p-2">
-                          {m.proximaManutencao && m.dataRealizacao && new Date(m.dataRealizacao) > new Date(m.proximaManutencao)
-                            ? 'Com Atraso'
-                            : 'Em Dia'}
-                        </td>
-                      </>
-                    ) : null}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="flex justify-end w-full sm:w-auto">
+              <button
+                onClick={() => setShowNewAppointmentForm(true)}
+                className="bg-purple-600 text-white px-6 py-2 rounded-xl hover:bg-purple-700 transition font-semibold w-full sm:w-auto"
+              >
+                Agendar
+              </button>
+            </div>
           </div>
 
-          {showMachineForm && (
-            <MachineForm
-              machine={editingMachine}
-              onSave={handleSave}
-              onCancel={() => {
-                setShowMachineForm(false);
-                setEditingMachine(null);
-              }}
-              sectors={sectors}
+          <div className="flex flex-wrap gap-2 sm:gap-4 justify-between bg-white p-4 rounded-xl shadow mb-4">
+            <TabButton
+              label="Equipamentos"
+              value="equipamentos"
+              current={tab}
+              setTab={setTab}
+              count={equipamentosCount}
+              activeColorClass="bg-blue-600"
             />
-          )}
+            <TabButton
+              label="Agendadas"
+              value="agendadas"
+              current={tab}
+              setTab={setTab}
+              count={agendadasCount}
+              activeColorClass="bg-yellow-600"
+            />
+            <TabButton
+              label="Pendentes"
+              value="pendentes"
+              current={tab}
+              setTab={setTab}
+              count={pendentesCount}
+              activeColorClass="bg-red-600"
+            />
+            <TabButton
+              label="Realizadas"
+              value="realizadas"
+              current={tab}
+              setTab={setTab}
+              count={realizadasCount}
+              activeColorClass="bg-green-600"
+            />
+          </div>
 
-          {showNewAppointmentForm && (
-            <AppointmentForm
-              machines={machines}
-              onSave={handleNewAppointmentSave}
-              onCancel={() => setShowNewAppointmentForm(false)}
-              today={currentDayString}
-            />
-          )}
-
-          {showCompletionForm && (
-            <CompletionForm
-              machineId={showCompletionForm.id}
-              currentDateRealizacao={showCompletionForm.dataRealizacao || ''}
-              currentChamado={showCompletionForm.chamado || ''}
-              onSave={handleCompleteMaintenance}
-              onCancel={() => setShowCompletionForm(null)}
-            />
-          )}
-
-          {showEditAppointmentForm && (
-            <EditAppointmentForm
-              machineId={showEditAppointmentForm.id}
-              currentProximaManutencao={showEditAppointmentForm.proximaManutencao || ''}
-              onSave={handleEditAppointmentDate}
-              onCancel={() => setShowEditAppointmentForm(null)}
-              referenceDate={currentDayString}
-            />
-          )}
-        </div>
+          <div className="bg-white rounded-xl shadow p-4">
+            <h2 className="text-xl font-bold text-gray-800 mb-4 capitalize">{tab}</h2>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Setor</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Máquina</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Etiqueta</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      {tab === 'realizadas' ? 'Realização' : 'Próxima Manutenção'}
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {(tab === 'equipamentos' ? filteredEquipamentos :
+                    tab === 'agendadas' ? agendadas :
+                    tab === 'pendentes' ? pendentes :
+                    realizadas
+                  ).map((m) => (
+                    <tr key={m.id} className="border-b hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">{m.setor}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{m.maquina}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{m.etiqueta}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {tab === 'realizadas' ? m.dataRealizacao : m.proximaManutencao}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                            ${m.status === 'agendado' ? 'bg-yellow-100 text-yellow-800' :
+                              m.status === 'pendente' ? 'bg-red-100 text-red-800' :
+                              'bg-green-100 text-green-800'
+                            }`}
+                        >
+                          {m.status.charAt(0).toUpperCase() + m.status.slice(1)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        {tab === 'pendentes' || tab === 'agendadas' ? (
+                          <>
+                            <button
+                              onClick={() => setShowCompletionForm(m)}
+                              className="text-green-600 hover:text-green-900 mx-2"
+                              title="Finalizar Manutenção"
+                            >
+                              <Calendar size={20} />
+                            </button>
+                            <button
+                              onClick={() => setShowEditAppointmentForm(m)}
+                              className="text-blue-600 hover:text-blue-900 mx-2"
+                              title="Alterar Agendamento"
+                            >
+                              <Edit size={20} />
+                            </button>
+                          </>
+                        ) : tab === 'equipamentos' ? (
+                          <>
+                            <button
+                              onClick={() => handleEdit(m)}
+                              className="text-indigo-600 hover:text-indigo-900 mx-2"
+                              title="Editar Máquina"
+                            >
+                              <Edit size={20} />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(m.id)}
+                              className="text-red-600 hover:text-red-900 mx-2"
+                              title="Excluir Máquina"
+                            >
+                              <LogOut size={20} />
+                            </button>
+                          </>
+                        ) : null}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </main>
       </div>
+
+      {showMachineForm && (
+        <MachineForm
+          machine={editingMachine}
+          onSave={editingMachine ? (formData) => handleUpdate(editingMachine.id, formData) : handleSave}
+          onCancel={() => {
+            setShowMachineForm(false);
+            setEditingMachine(null);
+          }}
+          sectors={sectors}
+        />
+      )}
+
+      {showNewAppointmentForm && (
+        <AppointmentForm
+          machines={machines}
+          onSave={handleCreateAppointment}
+          onCancel={() => setShowNewAppointmentForm(false)}
+          today={currentDayString}
+        />
+      )}
+
+      {showCompletionForm && (
+        <CompletionForm
+          machineId={showCompletionForm.id}
+          currentDateRealizacao={showCompletionForm.dataRealizacao || currentDayString}
+          currentChamado={showCompletionForm.chamado || ''}
+          onSave={handleCompleteMaintenance}
+          onCancel={() => setShowCompletionForm(null)}
+        />
+      )}
+
+      {showEditAppointmentForm && (
+        <EditAppointmentForm
+          machineId={showEditAppointmentForm.id}
+          currentProximaManutencao={showEditAppointmentForm.proximaManutencao || ''}
+          onSave={handleEditAppointmentDate}
+          onCancel={() => setShowEditAppointmentForm(null)}
+          referenceDate={currentDayString}
+        />
+      )}
     </div>
   );
 };
