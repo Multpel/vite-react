@@ -443,6 +443,7 @@ const MaintenanceApp = () => {
   const [showCompletionForm, setShowCompletionForm] = useState<Machine | null>(null);
   const [showEditAppointmentForm, setShowEditAppointmentForm] = useState<Machine | null>(null);
   const [realizedMaintenance, setRealizedMaintenance] = useState<Machine[]>([]);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   // Estados para autenticação
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -526,10 +527,16 @@ const MaintenanceApp = () => {
   }, [tab, currentUser]);
 
   const filteredEquipamentos = machines.filter((m) => {
-    const matchSearch = m.maquina.toLowerCase().includes(searchTerm.toLowerCase()) || m.etiqueta.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchSector = !selectedSector || m.setor === selectedSector;
-    return matchSearch && matchSector;
-  });
+  const matchSearch = m.maquina.toLowerCase().includes(searchTerm.toLowerCase()) || m.etiqueta.toLowerCase().includes(searchTerm.toLowerCase());
+  const matchSector = !selectedSector || m.setor === selectedSector;
+  return matchSearch && matchSector;
+}).sort((a, b) => {
+  if (sortOrder === 'asc') {
+    return a.maquina.localeCompare(b.maquina);
+  } else {
+    return b.maquina.localeCompare(a.maquina);
+  }
+});
 
   const agendadas = machines.filter(
     (m) => !m.dataRealizacao && m.proximaManutencao && new Date(m.proximaManutencao) >= new Date(currentDayString)
@@ -547,6 +554,10 @@ const MaintenanceApp = () => {
   const realizadas = realizedMaintenance;
   const realizadasCount = realizedMaintenance.length;
 
+  const handleSortByMaquina = () => {
+  setSortOrder(prevSortOrder => (prevSortOrder === 'asc' ? 'desc' : 'asc'));
+};
+  
   const handleEdit = (machineToEdit: Machine) => {
     const lastCompletedMaintenance = machines
       .filter(m => m.maquina === machineToEdit.maquina &&
@@ -874,7 +885,19 @@ const MaintenanceApp = () => {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Setor</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Máquina</th>
+                    <th
+  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+  onClick={handleSortByMaquina}
+>
+  <div className="flex items-center">
+    Máquina
+    {tab === 'equipamentos' && (
+      <span className="ml-2">
+        {sortOrder === 'asc' ? '▲' : '▼'}
+      </span>
+    )}
+  </div>
+</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Etiqueta</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       {tab === 'realizadas' ? 'Realização' : 'Próxima Manutenção'}
