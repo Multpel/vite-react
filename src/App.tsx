@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, ChangeEvent } from 'react';
-import { Calendar, Settings, Search, Plus, LogOut, Edit } from 'lucide-react';
+//import { Calendar, Settings, Search, Plus, LogOut, Edit } from 'lucide-react';
 import { db, auth } from './firebase-config';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
@@ -566,6 +566,40 @@ const MaintenanceApp = () => {
     setEditingMachine(machineWithLastChamado);
     setShowMachineForm(true);
   };
+  
+ const handleUpdate = async (id: string, formData: Omit<Machine, 'id'>) => {
+    try {
+      const machineDocRef = doc(db, 'machines', id);
+      
+      const calculatedStatus: 'pendente' | 'agendado' | 'concluido' = formData.dataRealizacao
+        ? 'concluido'
+        : formData.proximaManutencao
+        ? new Date(formData.proximaManutencao) < new Date(currentDayString)
+          ? 'pendente'
+          : 'agendado'
+        : 'pendente';
+  
+      const dataToUpdate = {
+        ...formData,
+        status: calculatedStatus,
+        timestampUltimaAtualizacao: new Date(),
+      };
+
+      await updateDoc(machineDocRef, dataToUpdate);
+
+      setMachines((prev) =>
+        prev.map((m) =>
+          m.id === id ? { id: id, ...dataToUpdate } as Machine : m
+        )
+      );
+      console.log("Máquina atualizada no Firestore com ID:", id);
+    } catch (error) {
+      console.error("Erro ao atualizar máquina no Firestore:", error);
+    } finally {
+      setEditingMachine(null);
+      setShowMachineForm(false);
+    }
+  }; 
 
   const handleDelete = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir este equipamento?')) {
