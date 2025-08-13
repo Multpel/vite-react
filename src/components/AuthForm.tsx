@@ -5,8 +5,8 @@ import {
 } from 'firebase/auth';
 import { auth } from '../firebase-config'; // Certifique-se de que 'auth' está exportado em firebase-config.ts
 
-interface AuthFormProps {
-  onAuthSuccess: () => void; // Callback para quando o login/registro for bem-sucedido
+//interface AuthFormProps {
+ // onAuthSuccess: () => void; // Callback para quando o login/registro for bem-sucedido
 }
 
 const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {

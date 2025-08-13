@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, ChangeEvent } from 'react';
-//import { Calendar, Settings, Search, Plus, LogOut, Edit } from 'lucide-react';
+import { Calendar, Search, Plus, LogOut, Edit } from 'lucide-react';
 import { db, auth } from './firebase-config';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
