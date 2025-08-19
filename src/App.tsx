@@ -32,9 +32,10 @@ const getNextBusinessDay = (date: Date): Date => {
   const newDate = new Date(date.getTime());
   let day = newDate.getDay();
 
-  if (day === 6) {
+  // 0 = Domingo, 6 = Sábado
+  if (day === 6) { // Se for sábado, adiciona 2 dias
     newDate.setDate(newDate.getDate() + 2);
-  } else if (day === 0) {
+  } else if (day === 0) { // Se for domingo, adiciona 1 dia
     newDate.setDate(newDate.getDate() + 1);
   }
   return newDate;
@@ -726,8 +727,9 @@ const MaintenanceApp = () => {
       await addDoc(collection(db, 'maintenance_history'), historyData);
       console.log("Histórico de manutenção salvo com sucesso!");
 
-      let calculatedNextMaintenanceDateObj = new Date(newDateRealizacao);
-      calculatedNextMaintenanceDateObj.setDate(calculatedNextMaintenanceDateObj.getDate() + 90);
+      const [year, month, day] = newDateRealizacao.split('-').map(Number);
+      const baseDate = new Date(Date.UTC(year, month - 1, day));
+      let calculatedNextMaintenanceDateObj = new Date(baseDate.setDate(baseDate.getDate() + 90));
       calculatedNextMaintenanceDateObj = getNextBusinessDay(calculatedNextMaintenanceDateObj);
       const nextMaintenanceDate = calculatedNextMaintenanceDateObj.toISOString().split('T')[0];
 
