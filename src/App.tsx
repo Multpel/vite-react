@@ -465,7 +465,6 @@ const MaintenanceApp = () => {
   useEffect(() => {
     const fetchMachines = async () => {
       if (!currentUser) {
-        setMachines([]);
         return;
       }
       try {
