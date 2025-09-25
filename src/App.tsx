@@ -584,7 +584,7 @@ const handleEdit = async (machineToEdit: Machine) => {
     const machineWithLastChamado = {
       ...machineToEdit,
       chamado: lastChamado,
-      dataRealizacao: lastRealizacao,
+      dataRealizacao: lastRealizacao, // <--- Este campo é para a data da ultima realizacao
     };
     setEditingMachine(machineWithLastChamado);
     setShowMachineForm(true);
