@@ -285,16 +285,10 @@ const CompletionForm = ({
   currentChamado,
   onSave,
   onCancel,
-}: {
-  machineId: string;
-  currentDateRealizacao: string;
-  currentChamado: string;
-  onSave: (machineId: string, dateRealizacao: string, chamado: string) => void | Promise<void>;
-  onCancel: () => void;
 }) => {
   const [dateRealizacao, setDateRealizacao] = useState(currentDateRealizacao);
   const [chamado, setChamado] = useState(currentChamado);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(null);
 
   const currentDateString = new Date().toISOString().split('T')[0];
 
@@ -308,6 +302,7 @@ const CompletionForm = ({
         setError('A Data de Realização não pode ser futura.');
         return;
     }
+    // AQUI ESTÁ A VERIFICAÇÃO DO CAMPO "CHAMADO"
     if (!chamado.trim()) {
       setError('Por favor, informe o Número do Chamado.');
       return;
@@ -325,7 +320,7 @@ const CompletionForm = ({
             <input
               type="date"
               value={dateRealizacao}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => setDateRealizacao(e.target.value)}
+              onChange={(e) => setDateRealizacao(e.target.value)}
               className="w-full p-2 border rounded-lg"
             />
           </div>
@@ -334,7 +329,7 @@ const CompletionForm = ({
             <input
               type="text"
               value={chamado}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => setChamado(e.target.value)}
+              onChange={(e) => setChamado(e.target.value)}
               className="w-full p-2 border rounded-lg"
               placeholder="Ex: CH00123"
             />
@@ -699,11 +694,11 @@ const MaintenanceApp = () => {
     }
   };
 
-  const handleCompleteMaintenance = async (
-    id: string,
-    newDateRealizacao: string,
-    newChamado: string
-  ) => {
+const handleCompleteMaintenance = async (
+    id,
+    newDateRealizacao,
+    newChamado
+) => {
     try {
       const machineDocRef = doc(db, 'machines', id);
       const machineToUpdate = machines.find(m => m.id === id);
@@ -713,13 +708,14 @@ const MaintenanceApp = () => {
         return;
       }
 
+      // Salva o histórico de manutenção
       const historyData = {
         machineId: id,
         setor: machineToUpdate.setor,
         maquina: machineToUpdate.maquina,
         etiqueta: machineToUpdate.etiqueta,
-        chamado: newChamado,
-        dataRealizacao: newDateRealizacao,
+        chamado: newChamado, // << AQUI: Salva o novo chamado
+        dataRealizacao: newDateRealizacao, // << AQUI: Salva a nova data
         proximaManutencao: machineToUpdate.proximaManutencao,
         timestampConclusao: new Date(),
       };
@@ -732,13 +728,14 @@ const MaintenanceApp = () => {
       calculatedNextMaintenanceDateObj = getNextBusinessDay(calculatedNextMaintenanceDateObj);
       const nextMaintenanceDate = calculatedNextMaintenanceDateObj.toISOString().split('T')[0];
 
-      const newStatus: 'pendente' | 'agendado' | 'concluido' =
+      const newStatus =
         new Date(nextMaintenanceDate) < new Date(currentDayString) ? 'pendente' : 'agendado';
 
+      // Atualiza o registro principal da máquina com o novo ciclo
       const dataToUpdate = {
         proximaManutencao: nextMaintenanceDate,
         dataRealizacao: '',
-        chamado: '',
+        chamado: `${newChamado} - ${newDateRealizacao}`, // << AQUI: Formata e atualiza o campo `chamado`
         status: newStatus,
         timestampUltimaAtualizacao: new Date(),
       };
@@ -747,7 +744,7 @@ const MaintenanceApp = () => {
 
       setMachines((prev) =>
         prev.map((m) =>
-          m.id === id ? { ...m, ...dataToUpdate } as Machine : m
+          m.id === id ? { ...m, ...dataToUpdate } : m
         )
       );
 
@@ -758,7 +755,7 @@ const MaintenanceApp = () => {
     } finally {
       setShowCompletionForm(null);
     }
-  };
+};
 
   const handleLogout = async () => {
     try {
