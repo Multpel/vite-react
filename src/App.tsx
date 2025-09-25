@@ -662,12 +662,20 @@ const handleUpdate = async (id: string, formData: Omit<Machine, 'id'>) => {
     }
   };
 
- // 🔑 Corrige a tipagem da função para que o formulário não tenha ID
-const handleSave = async (formData: Omit<Machine, 'id'>) => {
+ const handleSave = async (formData: Machine) => {
   try {
-    // Garante que o ID da máquina não é enviado para o Firestore
+    const { id, ...dataWithoutId } = formData;
+    
+    const calculatedStatus: 'pendente' | 'agendado' | 'concluido' = dataWithoutId.dataRealizacao
+      ? 'concluido'
+      : dataWithoutId.proximaManutencao
+      ? new Date(dataWithoutId.proximaManutencao) < new Date(currentDayString)
+        ? 'pendente'
+        : 'agendado'
+      : 'agendado';
+  
     const newMachineData = {
-      ...formData,
+      ...dataWithoutId,
       status: calculatedStatus,
       timestampCriacao: new Date(),
     };
