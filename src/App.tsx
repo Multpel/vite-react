@@ -716,32 +716,39 @@ const handleUpdate = async (id: string, formData: Omit<Machine, 'id'>) => {
     }
   };
 
-  const handleEditAppointmentDate = async (machineId: string, newProximaManutencao: string) => {
-    try {
-      const machineDocRef = doc(db, 'machines', machineId);
-      const dataToUpdate = {
-        proximaManutencao: newProximaManutencao,
-        status: new Date(newProximaManutencao) < new Date(currentDayString) ? 'pendente' : 'agendado',
-        timestampUltimaAtualizacao: new Date(),
-      };
-      console.log(`[DEBUG] Data to update in Firestore for machine ${machineId}:`, dataToUpdate);
-    await updateDoc(machineDocRef, dataToUpdate);
+  const handleEditAppointmentDate = async (machineId?: string, newDate: string) => {
+  if (!machineId) return;
 
-      setMachines((prev) =>
-        prev.map((m) =>
-          m.id === machineId ? { ...m, ...dataToUpdate } as Machine : m
-        )
-      );
-      console.log("Data de agendamento atualizada com sucesso para o ID:", machineId);
-    } catch (error) {
-      console.error("Erro ao atualizar data de agendamento:", error);
-    } finally {
-      setShowEditAppointmentForm(null);
+  try {
+    const isBooked = await isDateBooked(machineId, newDate);
+    if (isBooked) {
+      alert('Data indisponível. Por favor, escolha outra data.');
+      return;
     }
-  };
+
+    const machineRef = doc(db, 'machines', machineId);
+    await updateDoc(machineRef, {
+      proximaManutencao: newDate,
+      status: 'agendado',
+    });
+
+    setMachines((prevMachines) =>
+      prevMachines.map((machine) =>
+        machine.id === machineId
+          ? { ...machine, proximaManutencao: newDate, status: 'agendado' }
+          : machine
+      )
+    );
+    alert('Data de manutenção agendada com sucesso!');
+  } catch (error) {
+    console.error('Erro ao editar a data de agendamento:', error);
+  } finally {
+    setShowEditAppointmentForm(null);
+  }
+};
 
 const handleCompleteMaintenance = async (
-  id: string,
+  id?: string,
   newDateRealizacao: string,
   newChamado: string
 ) => {
