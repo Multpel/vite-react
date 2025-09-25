@@ -1047,9 +1047,10 @@ const handleCompleteMaintenance = async (
 
       {showCompletionForm && (
         <CompletionForm
-          machineId={showCompletionForm.id}
-          currentDateRealizacao={showCompletionForm.dataRealizacao || currentDayString}
-          currentChamado={showCompletionForm.chamado || ''}
+          // AQUI: Usamos a condição `showCompletionForm?.id` para garantir que o ID existe.
+          machineId={showCompletionForm?.id || ''}
+          currentDateRealizacao={showCompletionForm?.dataRealizacao || currentDayString}
+          currentChamado={showCompletionForm?.chamado || ''}
           onSave={handleCompleteMaintenance}
           onCancel={() => setShowCompletionForm(null)}
         />
@@ -1057,8 +1058,9 @@ const handleCompleteMaintenance = async (
 
       {showEditAppointmentForm && (
         <EditAppointmentForm
-          machineId={showEditAppointmentForm.id}
-          currentProximaManutencao={showEditAppointmentForm.proximaManutencao || ''}
+          // AQUI: Usamos a condição `showEditAppointmentForm?.id` para garantir que o ID existe.
+          machineId={showEditAppointmentForm?.id || ''}
+          currentProximaManutencao={showEditAppointmentForm?.proximaManutencao || ''}
           onSave={handleEditAppointmentDate}
           onCancel={() => setShowEditAppointmentForm(null)}
           referenceDate={currentDayString}
@@ -1070,7 +1072,7 @@ const handleCompleteMaintenance = async (
 
 export default MaintenanceApp;
 
-const isDateBooked = async (machineId: string, date: string): Promise<boolean> => {
+const isDateBooked = async (machineId?: string, date: string): Promise<boolean> => {
   const machinesRef = collection(db, 'machines');
   const q = query(
     machinesRef,
