@@ -560,8 +560,7 @@ const MaintenanceApp = () => {
   
 const handleEdit = async (machineToEdit: Machine) => {
     let lastChamado = '';
-    let lastRealizacao = '';
-
+    
     try {
       const historyCollection = collection(db, 'maintenance_history');
       const q = query(
@@ -575,6 +574,7 @@ const handleEdit = async (machineToEdit: Machine) => {
       
       if (!querySnapshot.empty) {
         const lastMaintenance = querySnapshot.docs[0].data();
+        // Concatena o número do chamado e a data de realização
         lastChamado = `${lastMaintenance.chamado} - ${lastMaintenance.dataRealizacao}`;
       }
     } catch (error) {
@@ -583,9 +583,10 @@ const handleEdit = async (machineToEdit: Machine) => {
 
     const machineWithLastChamado = {
       ...machineToEdit,
-      chamado: lastChamado,
-      dataRealizacao: lastRealizacao, // <--- Este campo é para a data da ultima realizacao
+      // Atribui o valor formatado ao campo 'chamado'
+      chamado: lastChamado, 
     };
+    
     setEditingMachine(machineWithLastChamado);
     setShowMachineForm(true);
 };
