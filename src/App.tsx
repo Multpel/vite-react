@@ -1,9 +1,8 @@
 ﻿import { useState, useEffect, ChangeEvent } from 'react';
 import { Calendar, Search, Plus, LogOut, Edit } from 'lucide-react';
 import { db, auth } from './firebase-config';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, orderBy, limit  } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
-
 import AuthForm from './components/AuthForm';
 
 // --- 1. DEFINIÇÕES DE TIPOS E INTERFACES ---
@@ -553,25 +552,37 @@ const MaintenanceApp = () => {
   setSortOrder(prevSortOrder => (prevSortOrder === 'asc' ? 'desc' : 'asc'));
 };
   
-  const handleEdit = (machineToEdit: Machine) => {
-    const lastCompletedMaintenance = machines
-      .filter(m => m.maquina === machineToEdit.maquina &&
-                 m.setor === machineToEdit.setor &&
-                 m.dataRealizacao
-      )
-      .sort((a, b) => {
-        const dateA = new Date(a.dataRealizacao || '1970-01-01').getTime();
-        const dateB = new Date(b.dataRealizacao || '1970-01-01').getTime();
-        return dateB - dateA;
-      })[0];
+  const handleEdit = async (machineToEdit) => {
+  let lastChamado = machineToEdit.chamado;
+  let lastRealizacao = machineToEdit.dataRealizacao;
 
-    const machineWithLastChamado = {
-      ...machineToEdit,
-      chamado: lastCompletedMaintenance ? lastCompletedMaintenance.chamado : machineToEdit.chamado
-    };
-    setEditingMachine(machineWithLastChamado);
-    setShowMachineForm(true);
+  try {
+    const historyCollection = collection(db, 'maintenance_history');
+    const q = query(
+      historyCollection,
+      where('maquina', '==', machineToEdit.maquina),
+      where('setor', '==', machineToEdit.setor),
+      orderBy('timestampConclusao', 'desc'),
+      limit(1)
+    );
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+      const lastMaintenance = querySnapshot.docs[0].data();
+      lastChamado = `${lastMaintenance.chamado} - ${lastMaintenance.dataRealizacao}`;
+    }
+  } catch (error) {
+    console.error("Erro ao buscar histórico de manutenção:", error);
+  }
+
+  const machineWithLastChamado = {
+    ...machineToEdit,
+    chamado: lastChamado,
+    dataRealizacao: lastRealizacao, // Mantém a data de realização para o formulário se houver
   };
+  setEditingMachine(machineWithLastChamado);
+  setShowMachineForm(true);
+};
   
  const handleUpdate = async (id: string, formData: Omit<Machine, 'id'>) => {
     try {
@@ -708,15 +719,13 @@ const handleCompleteMaintenance = async (
         return;
       }
 
-      // Salva o histórico de manutenção
       const historyData = {
         machineId: id,
         setor: machineToUpdate.setor,
         maquina: machineToUpdate.maquina,
         etiqueta: machineToUpdate.etiqueta,
-        chamado: newChamado, // << AQUI: Salva o novo chamado
-        dataRealizacao: newDateRealizacao, // << AQUI: Salva a nova data
-        proximaManutencao: machineToUpdate.proximaManutencao,
+        chamado: newChamado,
+        dataRealizacao: newDateRealizacao,
         timestampConclusao: new Date(),
       };
       await addDoc(collection(db, 'maintenance_history'), historyData);
@@ -731,11 +740,10 @@ const handleCompleteMaintenance = async (
       const newStatus =
         new Date(nextMaintenanceDate) < new Date(currentDayString) ? 'pendente' : 'agendado';
 
-      // Atualiza o registro principal da máquina com o novo ciclo
       const dataToUpdate = {
         proximaManutencao: nextMaintenanceDate,
         dataRealizacao: '',
-        chamado: `${newChamado} - ${newDateRealizacao}`, // << AQUI: Formata e atualiza o campo `chamado`
+        chamado: '', // << AQUI: Limpamos o campo 'chamado' na máquina principal
         status: newStatus,
         timestampUltimaAtualizacao: new Date(),
       };
