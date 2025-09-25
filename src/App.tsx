@@ -783,7 +783,7 @@ const handleCompleteMaintenance = async (
 
     setMachines((prev) =>
       prev.map((m) =>
-        m.id === id ? { ...m, ...dataToUpdate, status: newStatus } : m
+        m.id === id ? { ...m, ...dataToUpdate, status: newStatus, proximaManutencao: nextMaintenanceDate } : m
       )
     );
 
