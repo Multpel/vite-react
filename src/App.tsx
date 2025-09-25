@@ -284,10 +284,16 @@ const CompletionForm = ({
   currentChamado,
   onSave,
   onCancel,
+}: {
+  machineId: string;
+  currentDateRealizacao: string;
+  currentChamado: string;
+  onSave: (machineId: string, dateRealizacao: string, chamado: string) => void | Promise<void>;
+  onCancel: () => void;
 }) => {
   const [dateRealizacao, setDateRealizacao] = useState(currentDateRealizacao);
   const [chamado, setChamado] = useState(currentChamado);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   const currentDateString = new Date().toISOString().split('T')[0];
 
@@ -552,36 +558,36 @@ const MaintenanceApp = () => {
   setSortOrder(prevSortOrder => (prevSortOrder === 'asc' ? 'desc' : 'asc'));
 };
   
-  const handleEdit = async (machineToEdit) => {
-  let lastChamado = machineToEdit.chamado;
-  let lastRealizacao = machineToEdit.dataRealizacao;
+const handleEdit = async (machineToEdit: Machine) => {
+    let lastChamado = '';
+    let lastRealizacao = '';
 
-  try {
-    const historyCollection = collection(db, 'maintenance_history');
-    const q = query(
-      historyCollection,
-      where('maquina', '==', machineToEdit.maquina),
-      where('setor', '==', machineToEdit.setor),
-      orderBy('timestampConclusao', 'desc'),
-      limit(1)
-    );
-    const querySnapshot = await getDocs(q);
-
-    if (!querySnapshot.empty) {
-      const lastMaintenance = querySnapshot.docs[0].data();
-      lastChamado = `${lastMaintenance.chamado} - ${lastMaintenance.dataRealizacao}`;
+    try {
+      const historyCollection = collection(db, 'maintenance_history');
+      const q = query(
+        historyCollection,
+        where('maquina', '==', machineToEdit.maquina),
+        where('setor', '==', machineToEdit.setor),
+        orderBy('timestampConclusao', 'desc'),
+        limit(1)
+      );
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        const lastMaintenance = querySnapshot.docs[0].data();
+        lastChamado = `${lastMaintenance.chamado} - ${lastMaintenance.dataRealizacao}`;
+      }
+    } catch (error) {
+      console.error("Erro ao buscar histórico de manutenção:", error);
     }
-  } catch (error) {
-    console.error("Erro ao buscar histórico de manutenção:", error);
-  }
 
-  const machineWithLastChamado = {
-    ...machineToEdit,
-    chamado: lastChamado,
-    dataRealizacao: lastRealizacao, // Mantém a data de realização para o formulário se houver
-  };
-  setEditingMachine(machineWithLastChamado);
-  setShowMachineForm(true);
+    const machineWithLastChamado = {
+      ...machineToEdit,
+      chamado: lastChamado,
+      dataRealizacao: lastRealizacao,
+    };
+    setEditingMachine(machineWithLastChamado);
+    setShowMachineForm(true);
 };
   
  const handleUpdate = async (id: string, formData: Omit<Machine, 'id'>) => {
@@ -706,9 +712,9 @@ const MaintenanceApp = () => {
   };
 
 const handleCompleteMaintenance = async (
-    id,
-    newDateRealizacao,
-    newChamado
+    id: string,
+    newDateRealizacao: string,
+    newChamado: string
 ) => {
     try {
       const machineDocRef = doc(db, 'machines', id);
@@ -737,13 +743,13 @@ const handleCompleteMaintenance = async (
       calculatedNextMaintenanceDateObj = getNextBusinessDay(calculatedNextMaintenanceDateObj);
       const nextMaintenanceDate = calculatedNextMaintenanceDateObj.toISOString().split('T')[0];
 
-      const newStatus =
+      const newStatus: 'pendente' | 'agendado' | 'concluido' =
         new Date(nextMaintenanceDate) < new Date(currentDayString) ? 'pendente' : 'agendado';
 
       const dataToUpdate = {
         proximaManutencao: nextMaintenanceDate,
         dataRealizacao: '',
-        chamado: '', // << AQUI: Limpamos o campo 'chamado' na máquina principal
+        chamado: '',
         status: newStatus,
         timestampUltimaAtualizacao: new Date(),
       };
@@ -752,7 +758,7 @@ const handleCompleteMaintenance = async (
 
       setMachines((prev) =>
         prev.map((m) =>
-          m.id === id ? { ...m, ...dataToUpdate } : m
+          m.id === id ? { ...m, ...dataToUpdate, status: newStatus } : m
         )
       );
 
