@@ -591,39 +591,42 @@ const handleEdit = async (machineToEdit: Machine) => {
     setShowMachineForm(true);
 };
   
- const handleUpdate = async (id: string, formData: Omit<Machine, 'id'>) => {
-    try {
-      const machineDocRef = doc(db, 'machines', id);
-      
-      const calculatedStatus: 'pendente' | 'agendado' | 'concluido' = formData.dataRealizacao
-        ? 'concluido'
-        : formData.proximaManutencao
-        ? new Date(formData.proximaManutencao) < new Date(currentDayString)
-          ? 'pendente'
-          : 'agendado'
-        : 'pendente';
-  
-      const dataToUpdate = {
-        ...formData,
-        status: calculatedStatus,
-        timestampUltimaAtualizacao: new Date(),
-      };
+const handleUpdate = async (id: string, formData: Omit<Machine, 'id'>) => {
+  try {
+    const machineDocRef = doc(db, 'machines', id);
 
-      await updateDoc(machineDocRef, dataToUpdate);
+    const calculatedStatus: 'pendente' | 'agendado' | 'concluido' = formData.dataRealizacao
+      ? 'concluido'
+      : formData.proximaManutencao
+      ? new Date(formData.proximaManutencao) < new Date(currentDayString)
+        ? 'pendente'
+        : 'agendado'
+      : 'pendente';
 
-      setMachines((prev) =>
-        prev.map((m) =>
-          m.id === id ? { id: id, ...dataToUpdate } as Machine : m
-        )
-      );
-      console.log("Máquina atualizada no Firestore com ID:", id);
-    } catch (error) {
-      console.error("Erro ao atualizar máquina no Firestore:", error);
-    } finally {
-      setEditingMachine(null);
-      setShowMachineForm(false);
-    }
-  }; 
+    // 🔑 mantém o chamado já gravado se o formData vier vazio
+    const dataToUpdate = {
+      ...formData,
+      chamado: formData.chamado || (machines.find(m => m.id === id)?.chamado ?? ''),
+      status: calculatedStatus,
+      timestampUltimaAtualizacao: new Date(),
+    };
+
+    await updateDoc(machineDocRef, dataToUpdate);
+
+    setMachines((prev) =>
+      prev.map((m) =>
+        m.id === id ? { id: id, ...dataToUpdate } as Machine : m
+      )
+    );
+    console.log("Máquina atualizada no Firestore com ID:", id);
+  } catch (error) {
+    console.error("Erro ao atualizar máquina no Firestore:", error);
+  } finally {
+    setEditingMachine(null);
+    setShowMachineForm(false);
+  }
+};
+
 
   const handleDelete = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir este equipamento?')) {
