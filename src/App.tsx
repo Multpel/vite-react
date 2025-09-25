@@ -481,37 +481,30 @@ const MaintenanceApp = () => {
 
   // Efeito para carregar dados do Firestore
   useEffect(() => {
-    const fetchMachines = async () => {
-      if (!currentUser) {
-        return;
-      }
-      try {
-        console.log("[DEBUG] Fetching machines from Firestore...");
-        const machinesCollection = collection(db, 'machines');
-        const unsubscribe = onSnapshot(machinesCollection, (snapshot: QuerySnapshot<DocumentData>) => {
-          const machinesList = snapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => {
-            const data = doc.data();
-            const status: 'pendente' | 'agendado' | 'concluido' = data.dataRealizacao
-              ? 'concluido'
-              : data.proximaManutencao
-              ? new Date(data.proximaManutencao) < new Date(currentDayString)
-                ? 'pendente'
-                : 'agendado'
-              : 'pendente';
-            return {
-              id: doc.id,
-              ...data,
-              status: status,
-            } as Machine;
-          });
-          setMachines(machinesList);
-          console.log(`[DEBUG] Loaded ${machinesList.length} machines.`);
-        });
-        return () => unsubscribe;
-      } catch (error) {
-        console.error("🔥 [DEBUG] Erro ao carregar máquinas do Firestore:", error);
-      }
-    };
+   const fetchMachines = async () => {
+    if (!currentUser) {
+      return;
+    }
+    try {
+      console.log("[DEBUG] Fetching machines from Firestore...");
+      const machinesCollection = collection(db, 'machines');
+      const machineSnapshot = await getDocs(machinesCollection);
+
+      const machinesList = machineSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id, // <-- Esta linha é a correção crucial.
+          ...data,
+          status: data.status as 'pendente' | 'agendado' | 'concluido',
+        } as Machine;
+      });
+      setMachines(machinesList);
+      console.log(`[DEBUG] Loaded ${machinesList.length} machines from Firestore.`);
+
+    } catch (error) {
+      console.error("?? [DEBUG] Erro ao carregar máquinas do Firestore:", error);
+    }
+  };
 
     fetchMachines();
   }, [currentDayString, currentUser]);
