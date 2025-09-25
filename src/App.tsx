@@ -193,9 +193,9 @@ const AppointmentForm = ({
     const [appointmentDate, setAppointmentDate] = useState<string>('');
     const [error, setError] = useState<string | null>(null);
 
+    // O filtro deve estar DENTRO do componente
     const availableMachines = machines.filter(m =>
-        m.status === 'agendado' // Agora o filtro inclui máquinas com status 'agendado'
-        // A lógica de data já é tratada pelo status, então o filtro fica mais simples.
+        m.status === 'agendado' // Filtra apenas máquinas com status 'agendado'
     );
 
     const handleSubmit = () => {
