@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect, ChangeEvent } from 'react';
 import { Calendar, Search, Plus, LogOut, Edit } from 'lucide-react';
 import { db, auth } from './firebase-config';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, orderBy, limit  } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, orderBy, limit, onSnapshot, QuerySnapshot, DocumentData, QueryDocumentSnapshot  } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 import AuthForm from './components/AuthForm';
 
@@ -488,8 +488,8 @@ const MaintenanceApp = () => {
       try {
         console.log("[DEBUG] Fetching machines from Firestore...");
         const machinesCollection = collection(db, 'machines');
-        const unsubscribe = onSnapshot(machinesCollection, (snapshot) => {
-          const machinesList = snapshot.docs.map(doc => {
+        const unsubscribe = onSnapshot(machinesCollection, (snapshot: QuerySnapshot<DocumentData>) => {
+          const machinesList = snapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => {
             const data = doc.data();
             const status: 'pendente' | 'agendado' | 'concluido' = data.dataRealizacao
               ? 'concluido'
@@ -523,8 +523,8 @@ const MaintenanceApp = () => {
         try {
           console.log("[DEBUG] Fetching realized maintenance history...");
           const historyCollection = collection(db, 'maintenance_history');
-          const unsubscribe = onSnapshot(historyCollection, (snapshot) => {
-            const historyList = snapshot.docs.map(doc => {
+          const unsubscribe = onSnapshot(historyCollection, (snapshot: QuerySnapshot<DocumentData>) => {
+            const historyList = snapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => {
               const data = doc.data();
               return {
                 id: doc.id,
@@ -549,7 +549,7 @@ const MaintenanceApp = () => {
   const matchSearch = m.maquina.toLowerCase().includes(searchTerm.toLowerCase()) || m.etiqueta.toLowerCase().includes(searchTerm.toLowerCase());
   const matchSector = !selectedSector || m.setor === selectedSector;
   return matchSearch && matchSector;
-}).sort((a, b) => {
+}).sort((a: Machine, b: Machine) => {
   if (sortOrder === 'asc') {
     return a.maquina.localeCompare(b.maquina);
   } else {
