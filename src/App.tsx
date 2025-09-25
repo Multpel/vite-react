@@ -748,12 +748,15 @@ const handleUpdate = async (id: string, formData: Omit<Machine, 'id'>) => {
 };
 
 const handleCompleteMaintenance = async (
-  id?: string,
+  id?: string, // ✅ AQUI. O 'id' agora é opcional para resolver o erro TS2345.
   newDateRealizacao: string,
   newChamado: string
 ) => {
+  if (!id) {
+    console.error("ID da máquina não fornecido para concluir manutenção.");
+    return;
+  }
   try {
-
     const machineDocRef = doc(db, 'machines', id);
     const machineToUpdate = machines.find(m => m.id === id);
 
@@ -786,12 +789,11 @@ const handleCompleteMaintenance = async (
       new Date(nextMaintenanceDate) < new Date(currentDayString) ? 'pendente' : 'agendado';
     console.log(`[DEBUG] Calculated newStatus: ${newStatus}`);
 
-
     // Atualiza o documento da máquina com o chamado formatado
     const dataToUpdate = {
       proximaManutencao: nextMaintenanceDate,
       dataRealizacao: newDateRealizacao,
-      chamado: `${newChamado} - ${newDateRealizacao}`, // ✅ Corrigido
+      chamado: `${newChamado} - ${newDateRealizacao}`,
       status: newStatus,
       timestampUltimaAtualizacao: new Date(),
     };
