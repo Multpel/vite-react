@@ -1,7 +1,8 @@
 ﻿import { useState, useEffect, ChangeEvent } from 'react';
 import { Calendar, Search, Plus, LogOut, Edit } from 'lucide-react';
 import { db, auth } from './firebase-config';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, orderBy, limit  } from 'firebase/firestore';
+// Remove 'query', 'where', 'orderBy', 'limit'
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore'; 
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 import AuthForm from './components/AuthForm';
 
@@ -549,8 +550,8 @@ const MaintenanceApp = () => {
     setSortOrder(prevSortOrder => (prevSortOrder === 'asc' ? 'desc' : 'asc'));
   };
   
-  const handleEdit = async (machineToEdit: Machine) => {
-    setEditingMachine(machineWithLastChamado);
+  const handleEdit = (machineToEdit: Machine) => {
+    setEditingMachine(machineToEdit);
     setShowMachineForm(true);
   };
   
@@ -965,7 +966,6 @@ const handleCompleteMaintenance = async (
             setShowMachineForm(false);
             setEditingMachine(null);
           }}
-          sectors={sectors}
         />
       )}
 
