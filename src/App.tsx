@@ -16,6 +16,7 @@ interface TabButtonProps {
 }
 
 type Machine = {
+  id?: string; // <-- AQUI. Torna o ID opcional.	
   setor: string;
   maquina: string;
   etiqueta: string;
@@ -660,34 +661,37 @@ const handleUpdate = async (id: string, formData: Omit<Machine, 'id'>) => {
     }
   };
 
-  const handleSave = async (formData: Omit<Machine, 'id'>) => {
-    try {
-      const calculatedStatus: 'pendente' | 'agendado' | 'concluido' = formData.dataRealizacao
-        ? 'concluido'
-        : formData.proximaManutencao
-        ? new Date(formData.proximaManutencao) < new Date(currentDayString)
-          ? 'pendente'
-          : 'agendado'
-      : 'pendente';
+ const handleSave = async (formData: Omit<Machine, 'id'>) => {
+  try {
+    // 🔑 Garante que o ID da máquina não é enviado para o Firestore
+    const { id, ...dataWithoutId } = formData;
+    
+    const calculatedStatus: 'pendente' | 'agendado' | 'concluido' = dataWithoutId.dataRealizacao
+      ? 'concluido'
+      : dataWithoutId.proximaManutencao
+      ? new Date(dataWithoutId.proximaManutencao) < new Date(currentDayString)
+        ? 'pendente'
+        : 'agendado'
+      : 'agendado';
   
-      const newMachineData = {
-        ...formData,
-        status: calculatedStatus,
-        timestampCriacao: new Date(),
-      };
-      
-      const newDocRef = await addDoc(collection(db, 'machines'), newMachineData);
-      const machineWithId = { id: newDocRef.id, ...newMachineData } as Machine;
-      setMachines((prev) => [...prev, machineWithId]);
-      console.log("Máquina salva no Firestore com ID:", newDocRef.id);
-      
-    } catch (error) {
-      console.error("Erro ao salvar máquina no Firestore:", error);
-    } finally {
-      setEditingMachine(null);
-      setShowMachineForm(false);
-    }
-  };
+    const newMachineData = {
+      ...dataWithoutId,
+      status: calculatedStatus,
+      timestampCriacao: new Date(),
+    };
+    
+    const newDocRef = await addDoc(collection(db, 'machines'), newMachineData);
+    
+    setMachines((prev) => [...prev, { id: newDocRef.id, ...newMachineData } as Machine]);
+    console.log("Máquina salva no Firestore com ID:", newDocRef.id);
+    
+  } catch (error) {
+    console.error("Erro ao salvar máquina no Firestore:", error);
+  } finally {
+    setEditingMachine(null);
+    setShowMachineForm(false);
+  }
+};
 
   const handleCreateAppointment = async (machineId: string, appointmentDate: string) => {
     try {
