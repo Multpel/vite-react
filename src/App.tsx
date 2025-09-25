@@ -70,12 +70,10 @@ const MachineForm = ({
   machine,
   onSave,
   onCancel,
-  sectors,
 }: {
   machine: Machine | null;
   onSave: (formData: Machine) => void;
   onCancel: () => void;
-  sectors: string[];
 }) => {
   const [formData, setFormData] = useState<Machine>(
     machine || {
@@ -85,7 +83,7 @@ const MachineForm = ({
       etiqueta: '',
       chamado: '',
       proximaManutencao: '',
-      dataRealizacao: '', // O valor de dataRealizacao estará aqui
+      dataRealizacao: '', 
       status: 'pendente',
     }
   );
@@ -95,11 +93,6 @@ const MachineForm = ({
       setFormData(machine);
     }
   }, [machine]);
-
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
 
   const handleSubmit = () => {
     onSave(formData);
@@ -112,8 +105,36 @@ const MachineForm = ({
           {machine ? 'Editar Máquina' : 'Nova Máquina'}
         </h3>
         <div className="space-y-4">
-          {/* ... (outros campos) */}
-          
+          <div>
+            <label className="block text-sm font-medium mb-1">Setor</label>
+            <input
+              type="text"
+              name="setor"
+              value={formData.setor}
+              readOnly={true}
+              className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Máquina</label>
+            <input
+              type="text"
+              name="maquina"
+              value={formData.maquina}
+              readOnly={true}
+              className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Etiqueta</label>
+            <input
+              type="text"
+              name="etiqueta"
+              value={formData.etiqueta}
+              readOnly={true}
+              className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
+            />
+          </div>
           <div>
             <label className="block text-sm font-medium mb-1">Último Chamado</label>
             <input
@@ -529,34 +550,6 @@ const MaintenanceApp = () => {
   };
   
   const handleEdit = async (machineToEdit: Machine) => {
-    let lastChamado = '';
-    
-    try {
-      const historyCollection = collection(db, 'maintenance_history');
-      const q = query(
-        historyCollection,
-        where('maquina', '==', machineToEdit.maquina),
-        where('setor', '==', machineToEdit.setor),
-        orderBy('timestampConclusao', 'desc'),
-        limit(1)
-      );
-      const querySnapshot = await getDocs(q);
-      
-      if (!querySnapshot.empty) {
-        const lastMaintenance = querySnapshot.docs[0].data();
-        // Concatena o número do chamado e a data de realização
-        lastChamado = `${lastMaintenance.chamado} - ${lastMaintenance.dataRealizacao}`;
-      }
-    } catch (error) {
-      console.error("Erro ao buscar histórico de manutenção:", error);
-    }
-
-    const machineWithLastChamado = {
-      ...machineToEdit,
-      // Atribui o valor formatado ao campo 'chamado'
-      chamado: lastChamado, 
-    };
-    
     setEditingMachine(machineWithLastChamado);
     setShowMachineForm(true);
   };
@@ -707,12 +700,11 @@ const handleCompleteMaintenance = async (
       const newStatus: 'pendente' | 'agendado' | 'concluido' =
         new Date(nextMaintenanceDate) < new Date(currentDayString) ? 'pendente' : 'agendado';
 
-      // --- ATUALIZAÇÃO CHAVE ---
-      // Salva o histórico diretamente no documento da máquina principal
+      // Salva o histórico diretamente no documento da máquina
       const dataToUpdate = {
         proximaManutencao: nextMaintenanceDate,
-        dataRealizacao: newDateRealizacao, 
-        chamado: `${newChamado} - ${newDateRealizacao}`, // <--- GRAVA A INFORMAÇÃO FORMATADA AQUI
+        dataRealizacao: newDateRealizacao, // GRAVA A DATA DE REALIZAÇÃO
+        chamado: `${newChamado} - ${newDateRealizacao}`, // GRAVA O CHAMADO FORMATADO
         status: newStatus,
         timestampUltimaAtualizacao: new Date(),
       };
