@@ -40,6 +40,24 @@ const getNextBusinessDay = (date: Date): Date => {
   return newDate;
 };
 
+const findNextAvailableBusinessDay = async (machineId: string, startDate: Date): Promise<string> => {
+  let currentDate = new Date(startDate.getTime());
+  let nextDateString = '';
+  let found = false;
+
+  while (!found) {
+    currentDate = getNextBusinessDay(currentDate);
+    nextDateString = currentDate.toISOString().split('T')[0];
+    const isBooked = await isDateBooked(machineId, nextDateString);
+    if (!isBooked) {
+      found = true;
+    } else {
+      currentDate.setDate(currentDate.getDate() + 1); // Move to the next day if booked
+    }
+  }
+  return nextDateString;
+};
+
 
 // --- 2. COMPONENTES AUXILIARES ---
 const TabButton = ({
@@ -470,29 +488,28 @@ const MaintenanceApp = () => {
       try {
         console.log("[DEBUG] Fetching machines from Firestore...");
         const machinesCollection = collection(db, 'machines');
-        const machineSnapshot = await getDocs(machinesCollection);
-
-        const machinesList = machineSnapshot.docs.map(doc => {
-          const data = doc.data();
-          const status: 'pendente' | 'agendado' | 'concluido' = data.dataRealizacao
-            ? 'concluido'
-            : data.proximaManutencao
-            ? new Date(data.proximaManutencao) < new Date(currentDayString)
-              ? 'pendente'
-              : 'agendado'
-            : 'pendente';
-
-          return {
-            id: doc.id,
-            ...data,
-            status,
-          } as Machine;
+        const unsubscribe = onSnapshot(machinesCollection, (snapshot) => {
+          const machinesList = snapshot.docs.map(doc => {
+            const data = doc.data();
+            const status: 'pendente' | 'agendado' | 'concluido' = data.dataRealizacao
+              ? 'concluido'
+              : data.proximaManutencao
+              ? new Date(data.proximaManutencao) < new Date(currentDayString)
+                ? 'pendente'
+                : 'agendado'
+              : 'pendente';
+            return {
+              id: doc.id,
+              ...data,
+              status: status,
+            } as Machine;
+          });
+          setMachines(machinesList);
+          console.log(`[DEBUG] Loaded ${machinesList.length} machines.`);
         });
-        setMachines(machinesList);
-        console.log(`[DEBUG] Loaded ${machinesList.length} machines from Firestore.`);
-
+        return () => unsubscribe;
       } catch (error) {
-        console.error("?? [DEBUG] Erro ao carregar máquinas do Firestore:", error);
+        console.error("🔥 [DEBUG] Erro ao carregar máquinas do Firestore:", error);
       }
     };
 
@@ -506,17 +523,19 @@ const MaintenanceApp = () => {
         try {
           console.log("[DEBUG] Fetching realized maintenance history...");
           const historyCollection = collection(db, 'maintenance_history');
-          const historySnapshot = await getDocs(historyCollection);
-          const historyList = historySnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              ...data,
-              status: 'concluido',
-            } as Machine;
+          const unsubscribe = onSnapshot(historyCollection, (snapshot) => {
+            const historyList = snapshot.docs.map(doc => {
+              const data = doc.data();
+              return {
+                id: doc.id,
+                ...data,
+                status: 'concluido',
+              } as Machine;
+            });
+            setRealizedMaintenance(historyList.sort((a, b) => (b.dataRealizacao || '').localeCompare(a.dataRealizacao || '')));
+            console.log(`[DEBUG] Loaded ${historyList.length} realized maintenances.`);
           });
-          setRealizedMaintenance(historyList.sort((a, b) => (b.dataRealizacao || '').localeCompare(a.dataRealizacao || '')));
-          console.log(`[DEBUG] Loaded ${historyList.length} realized maintenances.`);
+          return () => unsubscribe;
         } catch (error) {
           console.error("🔥 [DEBUG] Erro ao carregar histórico de manutenções:", error);
         }
@@ -601,7 +620,7 @@ const handleUpdate = async (id: string, formData: Omit<Machine, 'id'>) => {
       ? new Date(formData.proximaManutencao) < new Date(currentDayString)
         ? 'pendente'
         : 'agendado'
-      : 'pendente';
+     
 
     // 🔑 mantém o chamado já gravado se o formData vier vazio
     const dataToUpdate = {
@@ -649,7 +668,7 @@ const handleUpdate = async (id: string, formData: Omit<Machine, 'id'>) => {
         ? new Date(formData.proximaManutencao) < new Date(currentDayString)
           ? 'pendente'
           : 'agendado'
-        : 'pendente';
+       
   
       const newMachineData = {
         ...formData,
@@ -658,8 +677,8 @@ const handleUpdate = async (id: string, formData: Omit<Machine, 'id'>) => {
       };
       
       const newDocRef = await addDoc(collection(db, 'machines'), newMachineData);
-
-      setMachines((prev) => [...prev, { id: newDocRef.id, ...newMachineData } as Machine]);
+      const machineWithId = { id: newDocRef.id, ...newMachineData } as Machine;
+      setMachines((prev) => [...prev, machineWithId]);
       console.log("Máquina salva no Firestore com ID:", newDocRef.id);
       
     } catch (error) {
@@ -745,9 +764,8 @@ const handleCompleteMaintenance = async (
     // Calcula próxima manutenção (90 dias úteis depois)
     const [year, month, day] = newDateRealizacao.split('-').map(Number);
     const baseDate = new Date(Date.UTC(year, month - 1, day));
-    let calculatedNextMaintenanceDateObj = new Date(baseDate.setDate(baseDate.getDate() + 90));
-    calculatedNextMaintenanceDateObj = getNextBusinessDay(calculatedNextMaintenanceDateObj);
-    const nextMaintenanceDate = calculatedNextMaintenanceDateObj.toISOString().split('T')[0];
+    let initialNextMaintenanceDate = new Date(baseDate.setDate(baseDate.getDate() + 90));
+    const nextMaintenanceDate = await findNextAvailableBusinessDay(id, initialNextMaintenanceDate);
 
     const newStatus: 'pendente' | 'agendado' | 'concluido' =
       new Date(nextMaintenanceDate) < new Date(currentDayString) ? 'pendente' : 'agendado';
@@ -1040,3 +1058,14 @@ const handleCompleteMaintenance = async (
 };
 
 export default MaintenanceApp;
+
+const isDateBooked = async (machineId: string, date: string): Promise<boolean> => {
+  const q = query(
+    collection(db, 'machines'),
+    where('id', '!=', machineId), // Excluir a própria máquina se estiver sendo atualizada
+    where('proximaManutencao', '==', date)
+  );
+  const querySnapshot = await getDocs(q);
+  return !querySnapshot.empty;
+};
+
