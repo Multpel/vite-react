@@ -620,7 +620,7 @@ const handleUpdate = async (id: string, formData: Omit<Machine, 'id'>) => {
       ? new Date(formData.proximaManutencao) < new Date(currentDayString)
         ? 'pendente'
         : 'agendado'
-     
+      : 'pendente';
 
     // 🔑 mantém o chamado já gravado se o formData vier vazio
     const dataToUpdate = {
@@ -668,7 +668,7 @@ const handleUpdate = async (id: string, formData: Omit<Machine, 'id'>) => {
         ? new Date(formData.proximaManutencao) < new Date(currentDayString)
           ? 'pendente'
           : 'agendado'
-       
+      : 'pendente';
   
       const newMachineData = {
         ...formData,
