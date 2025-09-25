@@ -16,7 +16,6 @@ interface TabButtonProps {
 }
 
 type Machine = {
-  id: string;
   setor: string;
   maquina: string;
   etiqueta: string;
