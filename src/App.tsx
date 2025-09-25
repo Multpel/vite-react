@@ -612,6 +612,7 @@ const handleEdit = async (machineToEdit: Machine) => {
   
 const handleUpdate = async (id: string, formData: Omit<Machine, 'id'>) => {
   try {
+
     const machineDocRef = doc(db, 'machines', id);
 
     const calculatedStatus: 'pendente' | 'agendado' | 'concluido' = formData.dataRealizacao
@@ -630,6 +631,7 @@ const handleUpdate = async (id: string, formData: Omit<Machine, 'id'>) => {
       timestampUltimaAtualizacao: new Date(),
     };
 
+    console.log(`[DEBUG] Data to update in Firestore for machine ${id}:`, dataToUpdate);
     await updateDoc(machineDocRef, dataToUpdate);
 
     setMachines((prev) =>
@@ -648,9 +650,14 @@ const handleUpdate = async (id: string, formData: Omit<Machine, 'id'>) => {
 
 
   const handleDelete = async (id: string) => {
+  if (!id) {
+    console.error("ID da máquina inválido para exclusão.");
+    return;
+  }
     if (confirm('Tem certeza que deseja excluir este equipamento?')) {
       try {
-        const machineDocRef = doc(db, 'machines', id);
+    
+    const machineDocRef = doc(db, 'machines', id);
         await deleteDoc(machineDocRef);
         setMachines((prev) => prev.filter((machine) => machine.id !== id));
         console.log("Máquina deletada do Firestore e do estado local com ID:", id);
@@ -697,7 +704,8 @@ const handleUpdate = async (id: string, formData: Omit<Machine, 'id'>) => {
         status: new Date(appointmentDate) < new Date(currentDayString) ? 'pendente' : 'agendado',
         timestampAgendamento: new Date(),
       };
-      await updateDoc(machineDocRef, dataToUpdate);
+      console.log(`[DEBUG] Data to update in Firestore for machine ${id}:`, dataToUpdate);
+    await updateDoc(machineDocRef, dataToUpdate);
       setMachines((prev) =>
         prev.map((m) =>
           m.id === machineId ? { ...m, ...dataToUpdate } as Machine : m
@@ -719,7 +727,8 @@ const handleUpdate = async (id: string, formData: Omit<Machine, 'id'>) => {
         status: new Date(newProximaManutencao) < new Date(currentDayString) ? 'pendente' : 'agendado',
         timestampUltimaAtualizacao: new Date(),
       };
-      await updateDoc(machineDocRef, dataToUpdate);
+      console.log(`[DEBUG] Data to update in Firestore for machine ${id}:`, dataToUpdate);
+    await updateDoc(machineDocRef, dataToUpdate);
 
       setMachines((prev) =>
         prev.map((m) =>
@@ -740,6 +749,7 @@ const handleCompleteMaintenance = async (
   newChamado: string
 ) => {
   try {
+
     const machineDocRef = doc(db, 'machines', id);
     const machineToUpdate = machines.find(m => m.id === id);
 
@@ -766,9 +776,12 @@ const handleCompleteMaintenance = async (
     const baseDate = new Date(Date.UTC(year, month - 1, day));
     let initialNextMaintenanceDate = new Date(baseDate.setDate(baseDate.getDate() + 90));
     const nextMaintenanceDate = await findNextAvailableBusinessDay(id, initialNextMaintenanceDate);
+    console.log(`[DEBUG] Calculated nextMaintenanceDate: ${nextMaintenanceDate}`);
 
     const newStatus: 'pendente' | 'agendado' | 'concluido' =
       new Date(nextMaintenanceDate) < new Date(currentDayString) ? 'pendente' : 'agendado';
+    console.log(`[DEBUG] Calculated newStatus: ${newStatus}`);
+
 
     // Atualiza o documento da máquina com o chamado formatado
     const dataToUpdate = {
@@ -779,11 +792,12 @@ const handleCompleteMaintenance = async (
       timestampUltimaAtualizacao: new Date(),
     };
 
+    console.log(`[DEBUG] Data to update in Firestore for machine ${id}:`, dataToUpdate);
     await updateDoc(machineDocRef, dataToUpdate);
 
     setMachines((prev) =>
       prev.map((m) =>
-        m.id === id ? { ...m, ...dataToUpdate, status: newStatus, proximaManutencao: nextMaintenanceDate } : m
+        m.id === id ? { ...m, ...dataToUpdate, status: newStatus } : m
       )
     );
 
@@ -1060,12 +1074,13 @@ const handleCompleteMaintenance = async (
 export default MaintenanceApp;
 
 const isDateBooked = async (machineId: string, date: string): Promise<boolean> => {
+  const machinesRef = collection(db, 'machines');
   const q = query(
-    collection(db, 'machines'),
-    where('id', '!=', machineId), // Excluir a própria máquina se estiver sendo atualizada
+    machinesRef,
     where('proximaManutencao', '==', date)
   );
   const querySnapshot = await getDocs(q);
-  return !querySnapshot.empty;
+  // Verifica se existe alguma máquina agendada para a data, excluindo a máquina atual se ela for a que está sendo agendada
+  const bookedMachines = querySnapshot.docs.filter(doc => doc.id !== machineId);
+  return bookedMachines.length > 0;
 };
-
