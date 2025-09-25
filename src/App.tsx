@@ -713,63 +713,66 @@ const handleEdit = async (machineToEdit: Machine) => {
   };
 
 const handleCompleteMaintenance = async (
-    id: string,
-    newDateRealizacao: string,
-    newChamado: string
+  id: string,
+  newDateRealizacao: string,
+  newChamado: string
 ) => {
-    try {
-      const machineDocRef = doc(db, 'machines', id);
-      const machineToUpdate = machines.find(m => m.id === id);
+  try {
+    const machineDocRef = doc(db, 'machines', id);
+    const machineToUpdate = machines.find(m => m.id === id);
 
-      if (!machineToUpdate) {
-        console.error("Máquina não encontrada para concluir manutenção.");
-        return;
-      }
-
-      const historyData = {
-        machineId: id,
-        setor: machineToUpdate.setor,
-        maquina: machineToUpdate.maquina,
-        etiqueta: machineToUpdate.etiqueta,
-        chamado: newChamado,
-        dataRealizacao: newDateRealizacao,
-        timestampConclusao: new Date(),
-      };
-      await addDoc(collection(db, 'maintenance_history'), historyData);
-      console.log("Histórico de manutenção salvo com sucesso!");
-
-      const [year, month, day] = newDateRealizacao.split('-').map(Number);
-      const baseDate = new Date(Date.UTC(year, month - 1, day));
-      let calculatedNextMaintenanceDateObj = new Date(baseDate.setDate(baseDate.getDate() + 90));
-      calculatedNextMaintenanceDateObj = getNextBusinessDay(calculatedNextMaintenanceDateObj);
-      const nextMaintenanceDate = calculatedNextMaintenanceDateObj.toISOString().split('T')[0];
-
-      const newStatus: 'pendente' | 'agendado' | 'concluido' =
-        new Date(nextMaintenanceDate) < new Date(currentDayString) ? 'pendente' : 'agendado';
-
-      const dataToUpdate = {
-        proximaManutencao: nextMaintenanceDate,
-        dataRealizacao: '',
-        chamado: '',
-        status: newStatus,
-        timestampUltimaAtualizacao: new Date(),
-      };
-
-      await updateDoc(machineDocRef, dataToUpdate);
-
-      setMachines((prev) =>
-        prev.map((m) =>
-          m.id === id ? { ...m, ...dataToUpdate, status: newStatus } : m
-        )
-      );
-
-      console.log("Registro da máquina atualizado para o próximo ciclo. ID:", id);
-
-    } catch (error) {
-      console.error("Erro ao finalizar manutenção ou criar histórico:", error);
-    } finally {
-      setShowCompletionForm(null);
+    if (!machineToUpdate) {
+      console.error("Máquina não encontrada para concluir manutenção.");
+      return;
     }
+
+    // Salva no histórico
+    const historyData = {
+      machineId: id,
+      setor: machineToUpdate.setor,
+      maquina: machineToUpdate.maquina,
+      etiqueta: machineToUpdate.etiqueta,
+      chamado: newChamado,
+      dataRealizacao: newDateRealizacao,
+      timestampConclusao: new Date(),
+    };
+    await addDoc(collection(db, 'maintenance_history'), historyData);
+    console.log("Histórico de manutenção salvo com sucesso!");
+
+    // Calcula próxima manutenção (90 dias úteis depois)
+    const [year, month, day] = newDateRealizacao.split('-').map(Number);
+    const baseDate = new Date(Date.UTC(year, month - 1, day));
+    let calculatedNextMaintenanceDateObj = new Date(baseDate.setDate(baseDate.getDate() + 90));
+    calculatedNextMaintenanceDateObj = getNextBusinessDay(calculatedNextMaintenanceDateObj);
+    const nextMaintenanceDate = calculatedNextMaintenanceDateObj.toISOString().split('T')[0];
+
+    const newStatus: 'pendente' | 'agendado' | 'concluido' =
+      new Date(nextMaintenanceDate) < new Date(currentDayString) ? 'pendente' : 'agendado';
+
+    // Atualiza o documento da máquina com o chamado formatado
+    const dataToUpdate = {
+      proximaManutencao: nextMaintenanceDate,
+      dataRealizacao: newDateRealizacao,
+      chamado: `${newChamado} - ${newDateRealizacao}`, // ✅ Corrigido
+      status: newStatus,
+      timestampUltimaAtualizacao: new Date(),
+    };
+
+    await updateDoc(machineDocRef, dataToUpdate);
+
+    setMachines((prev) =>
+      prev.map((m) =>
+        m.id === id ? { ...m, ...dataToUpdate, status: newStatus } : m
+      )
+    );
+
+    console.log("Registro da máquina atualizado com último chamado e próximo ciclo. ID:", id);
+
+  } catch (error) {
+    console.error("Erro ao finalizar manutenção ou criar histórico:", error);
+  } finally {
+    setShowCompletionForm(null);
+  }
 };
 
   const handleLogout = async () => {
