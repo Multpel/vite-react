@@ -71,10 +71,12 @@ const MachineForm = ({
   machine,
   onSave,
   onCancel,
+  sectors,
 }: {
   machine: Machine | null;
   onSave: (formData: Machine) => void;
   onCancel: () => void;
+  sectors: string[];
 }) => {
   const [formData, setFormData] = useState<Machine>(
     machine || {
@@ -84,7 +86,7 @@ const MachineForm = ({
       etiqueta: '',
       chamado: '',
       proximaManutencao: '',
-      dataRealizacao: '', 
+      dataRealizacao: '',
       status: 'pendente',
     }
   );
@@ -94,6 +96,11 @@ const MachineForm = ({
       setFormData(machine);
     }
   }, [machine]);
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
   const handleSubmit = () => {
     onSave(formData);
@@ -106,56 +113,73 @@ const MachineForm = ({
           {machine ? 'Editar Máquina' : 'Nova Máquina'}
         </h3>
         <div className="space-y-4">
+          {/* Setor */}
           <div>
             <label className="block text-sm font-medium mb-1">Setor</label>
-            <input
-              type="text"
+            <select
               name="setor"
               value={formData.setor}
-              readOnly={true}
-              className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
-            />
+              onChange={handleChange}
+              className="w-full p-2 border rounded-lg"
+            >
+              <option value="">Selecione o setor</option>
+              {sectors.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
           </div>
+
+          {/* Máquina */}
           <div>
             <label className="block text-sm font-medium mb-1">Máquina</label>
             <input
               type="text"
               name="maquina"
               value={formData.maquina}
-              readOnly={true}
-              className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
+              onChange={handleChange}
+              className="w-full p-2 border rounded-lg"
             />
           </div>
+
+          {/* Etiqueta */}
           <div>
             <label className="block text-sm font-medium mb-1">Etiqueta</label>
             <input
               type="text"
               name="etiqueta"
               value={formData.etiqueta}
-              readOnly={true}
-              className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
+              onChange={handleChange}
+              className="w-full p-2 border rounded-lg"
             />
           </div>
+
+          {/* Último Chamado (somente leitura) */}
           <div>
             <label className="block text-sm font-medium mb-1">Último Chamado</label>
             <input
               type="text"
               name="chamado"
               value={formData.chamado}
-              readOnly={true}
+              readOnly
               className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
             />
           </div>
+
+          {/* Próxima Manutenção (somente leitura) */}
           <div>
             <label className="block text-sm font-medium mb-1">Próxima Manutenção</label>
             <input
               type="date"
               name="proximaManutencao"
               value={formData.proximaManutencao || ''}
-              readOnly={true}
+              readOnly
               className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
             />
           </div>
+
+          {/* Botões */}
           <div className="flex gap-2 pt-4">
             <button
               type="button"
@@ -176,100 +200,6 @@ const MachineForm = ({
       </div>
     </div>
   );
-};
-
-const AppointmentForm = ({
-    machines,
-    onSave,
-    onCancel,
-    today
-}: {
-    machines: Machine[];
-    onSave: (machineId: string, appointmentDate: string) => void | Promise<void>;
-    onCancel: () => void;
-    today: string;
-}) => {
-    const [selectedMachineId, setSelectedMachineId] = useState<string | ''>(''); 
-    const [appointmentDate, setAppointmentDate] = useState<string>('');
-    const [error, setError] = useState<string | null>(null);
-
-    // O filtro deve estar DENTRO do componente
-    const availableMachines = machines.filter(m =>
-        m.status === 'agendado' // Filtra apenas máquinas com status 'agendado'
-    );
-
-    const handleSubmit = () => {
-        setError(null);
-
-        if (!selectedMachineId) {
-            setError('Por favor, selecione uma máquina.');
-            return;
-        }
-        if (!appointmentDate) {
-            setError('Por favor, selecione uma data de agendamento.');
-            return;
-        }
-        if (new Date(appointmentDate) < new Date(today)) {
-            setError('A data de agendamento não pode ser no passado.');
-            return;
-        }
-
-        onSave(selectedMachineId, appointmentDate);
-    };
-
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl p-6 w-full max-w-md">
-                <h3 className="text-xl font-bold mb-4">Novo Agendamento</h3>
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Selecionar Máquina</label>
-                        <select
-                            value={selectedMachineId}
-                            onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedMachineId(e.target.value)}
-                            className="w-full p-2 border rounded-lg"
-                        >
-                            <option value="">Selecione uma máquina</option>
-                            {availableMachines.map(m => (
-                                <option key={m.id} value={m.id}>
-                                    {m.maquina} ({m.setor}) - {m.etiqueta || 'Sem Etiqueta'}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Data de Agendamento</label>
-                        <input
-                            type="date"
-                            value={appointmentDate}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) => setAppointmentDate(e.target.value)}
-                            min={today}
-                            className="w-full p-2 border rounded-lg"
-                        />
-                    </div>
-
-                    {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
-
-                    <div className="flex gap-2 pt-4">
-                        <button
-                            type="button"
-                            onClick={handleSubmit}
-                            className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700"
-                        >
-                            Agendar
-                        </button>
-                        <button
-                            type="button"
-                            onClick={onCancel}
-                            className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700"
-                        >
-                            Cancelar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
 };
 
 const CompletionForm = ({
