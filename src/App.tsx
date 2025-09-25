@@ -485,11 +485,11 @@ useEffect(() => {
       setMachines([]);
       return;
     }
-
+    
     console.log("[DEBUG] Setting up real-time listener for machines...");
-
+    
     const machinesCollection = collection(db, 'machines');
-
+    
     const unsubscribe = onSnapshot(machinesCollection, (querySnapshot) => {
       const machinesList = querySnapshot.docs.map(doc => {
         const data = doc.data() as Omit<Machine, 'id'>;
@@ -504,13 +504,10 @@ useEffect(() => {
     }, (error) => {
       console.error("?? [DEBUG] Erro ao carregar máquinas do Firestore:", error);
     });
-
+    
     return () => unsubscribe();
-
+    
   }, [currentUser]);
-
-    fetchMachines();
-  }, [currentDayString, currentUser]);
 
   // NOVO useEffect para buscar o histórico de manutenções
   useEffect(() => {
