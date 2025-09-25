@@ -98,7 +98,6 @@ const MachineForm = ({
 }) => {
   const [formData, setFormData] = useState<Machine>(
     machine || {
-      id: '',
       setor: '',
       maquina: '',
       etiqueta: '',
