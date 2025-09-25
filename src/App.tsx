@@ -147,11 +147,11 @@ const MachineForm = ({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Última Manutenção</label>
+            <label className="block text-sm font-medium mb-1">Próxima Manutenção</label>
             <input
               type="date"
-              name="dataRealizacao"
-              value={formData.dataRealizacao || ''}
+              name="proximaManutencao"
+              value={formData.proximaManutencao || ''}
               readOnly={true}
               className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
             />
