@@ -633,7 +633,7 @@ const MaintenanceApp = () => {
       setShowMachineForm(false);
     }
   };
-  };
+
 
   const handleCreateAppointment = async (machineId: string, appointmentDate: string) => {
     try {
