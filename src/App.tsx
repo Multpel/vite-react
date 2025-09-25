@@ -480,31 +480,34 @@ const MaintenanceApp = () => {
   }, []);
 
   // Efeito para carregar dados do Firestore
-  useEffect(() => {
-   const fetchMachines = async () => {
+useEffect(() => {
     if (!currentUser) {
+      setMachines([]);
       return;
     }
-    try {
-      console.log("[DEBUG] Fetching machines from Firestore...");
-      const machinesCollection = collection(db, 'machines');
-      const machineSnapshot = await getDocs(machinesCollection);
 
-      const machinesList = machineSnapshot.docs.map(doc => {
-        const data = doc.data();
+    console.log("[DEBUG] Setting up real-time listener for machines...");
+
+    const machinesCollection = collection(db, 'machines');
+
+    const unsubscribe = onSnapshot(machinesCollection, (querySnapshot) => {
+      const machinesList = querySnapshot.docs.map(doc => {
+        const data = doc.data() as Omit<Machine, 'id'>;
         return {
-          id: doc.id, // <-- Esta linha é a correção crucial.
+          id: doc.id,
           ...data,
           status: data.status as 'pendente' | 'agendado' | 'concluido',
         } as Machine;
       });
       setMachines(machinesList);
-      console.log(`[DEBUG] Loaded ${machinesList.length} machines from Firestore.`);
-
-    } catch (error) {
+      console.log(`[DEBUG] Loaded ${machinesList.length} machines from Firestore via real-time listener.`);
+    }, (error) => {
       console.error("?? [DEBUG] Erro ao carregar máquinas do Firestore:", error);
-    }
-  };
+    });
+
+    return () => unsubscribe();
+
+  }, [currentUser]);
 
     fetchMachines();
   }, [currentDayString, currentUser]);
