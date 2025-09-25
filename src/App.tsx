@@ -624,7 +624,7 @@ const handleUpdate = async (id: string, formData: Omit<Machine, 'id'>) => {
       timestampUltimaAtualizacao: new Date(),
     };
 
-    console.log(`[DEBUG] Data to update in Firestore for machine ${machineId}:`, dataToUpdate);
+    console.log(`[DEBUG] Data to update in Firestore for machine ${id}:`, dataToUpdate);
     await updateDoc(machineDocRef, dataToUpdate);
 
     setMachines((prev) =>
@@ -785,7 +785,7 @@ const handleCompleteMaintenance = async (
       timestampUltimaAtualizacao: new Date(),
     };
 
-    console.log(`[DEBUG] Data to update in Firestore for machine ${machineId}:`, dataToUpdate);
+    console.log(`[DEBUG] Data to update in Firestore for machine ${id}:`, dataToUpdate);
     await updateDoc(machineDocRef, dataToUpdate);
 
     setMachines((prev) =>
