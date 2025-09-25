@@ -1,8 +1,7 @@
 ﻿import { useState, useEffect, ChangeEvent } from 'react';
 import { Calendar, Search, Plus, LogOut, Edit } from 'lucide-react';
 import { db, auth } from './firebase-config';
-// Remove 'query', 'where', 'orderBy', 'limit'
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore'; 
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, orderBy, limit  } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 import AuthForm from './components/AuthForm';
 
@@ -40,6 +39,7 @@ const getNextBusinessDay = (date: Date): Date => {
   }
   return newDate;
 };
+
 
 // --- 2. COMPONENTES AUXILIARES ---
 const TabButton = ({
@@ -91,12 +91,6 @@ const MachineForm = ({
     }
   );
 
-  useEffect(() => {
-    if (machine) {
-      setFormData(machine);
-    }
-  }, [machine]);
-
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -113,7 +107,6 @@ const MachineForm = ({
           {machine ? 'Editar Máquina' : 'Nova Máquina'}
         </h3>
         <div className="space-y-4">
-          {/* Setor */}
           <div>
             <label className="block text-sm font-medium mb-1">Setor</label>
             <select
@@ -130,8 +123,6 @@ const MachineForm = ({
               ))}
             </select>
           </div>
-
-          {/* Máquina */}
           <div>
             <label className="block text-sm font-medium mb-1">Máquina</label>
             <input
@@ -142,8 +133,6 @@ const MachineForm = ({
               className="w-full p-2 border rounded-lg"
             />
           </div>
-
-          {/* Etiqueta */}
           <div>
             <label className="block text-sm font-medium mb-1">Etiqueta</label>
             <input
@@ -154,32 +143,26 @@ const MachineForm = ({
               className="w-full p-2 border rounded-lg"
             />
           </div>
-
-          {/* Último Chamado (somente leitura) */}
           <div>
             <label className="block text-sm font-medium mb-1">Último Chamado</label>
             <input
               type="text"
               name="chamado"
               value={formData.chamado}
-              readOnly
+              readOnly={true}
               className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
             />
           </div>
-
-          {/* Próxima Manutenção (somente leitura) */}
           <div>
-            <label className="block text-sm font-medium mb-1">Próxima Manutenção</label>
+            <label className="block text-sm font-medium mb-1">Última Manutenção</label>
             <input
               type="date"
               name="proximaManutencao"
               value={formData.proximaManutencao || ''}
-              readOnly
+              readOnly={true}
               className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
             />
           </div>
-
-          {/* Botões */}
           <div className="flex gap-2 pt-4">
             <button
               type="button"
@@ -200,6 +183,99 @@ const MachineForm = ({
       </div>
     </div>
   );
+};
+
+const AppointmentForm = ({
+    machines,
+    onSave,
+    onCancel,
+    today
+}: {
+    machines: Machine[];
+    onSave: (machineId: string, appointmentDate: string) => void | Promise<void>;
+    onCancel: () => void;
+    today: string;
+}) => {
+    const [selectedMachineId, setSelectedMachineId] = useState<string | ''>('');
+    const [appointmentDate, setAppointmentDate] = useState<string>('');
+    const [error, setError] = useState<string | null>(null);
+
+    const availableMachines = machines.filter(m =>
+        !m.dataRealizacao && (!m.proximaManutencao || new Date(m.proximaManutencao) < new Date(today))
+    );
+
+    const handleSubmit = () => {
+        setError(null);
+
+        if (!selectedMachineId) {
+            setError('Por favor, selecione uma máquina.');
+            return;
+        }
+        if (!appointmentDate) {
+            setError('Por favor, selecione uma data de agendamento.');
+            return;
+        }
+        if (new Date(appointmentDate) < new Date(today)) {
+            setError('A data de agendamento não pode ser no passado.');
+            return;
+        }
+
+        onSave(selectedMachineId, appointmentDate);
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl p-6 w-full max-w-md">
+                <h3 className="text-xl font-bold mb-4">Novo Agendamento</h3>
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium mb-1">Selecionar Máquina</label>
+                        <select
+                            value={selectedMachineId}
+                            onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedMachineId(e.target.value)}
+                            className="w-full p-2 border rounded-lg"
+                        >
+                            <option value="">Selecione uma máquina</option>
+                            {availableMachines.map(m => (
+                                <option key={m.id} value={m.id}>
+                                    {m.maquina} ({m.setor}) - {m.etiqueta || 'Sem Etiqueta'}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1">Data de Agendamento</label>
+                        <input
+                            type="date"
+                            value={appointmentDate}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => setAppointmentDate(e.target.value)}
+                            min={today}
+                            className="w-full p-2 border rounded-lg"
+                        />
+                    </div>
+
+                    {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+
+                    <div className="flex gap-2 pt-4">
+                        <button
+                            type="button"
+                            onClick={handleSubmit}
+                            className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700"
+                        >
+                            Agendar
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onCancel}
+                            className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700"
+                        >
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 };
 
 const CompletionForm = ({
@@ -231,6 +307,7 @@ const CompletionForm = ({
         setError('A Data de Realização não pode ser futura.');
         return;
     }
+    // AQUI ESTÁ A VERIFICAÇÃO DO CAMPO "CHAMADO"
     if (!chamado.trim()) {
       setError('Por favor, informe o Número do Chamado.');
       return;
@@ -387,29 +464,38 @@ const MaintenanceApp = () => {
   // Efeito para carregar dados do Firestore
   useEffect(() => {
     const fetchMachines = async () => {
-    if (!currentUser) {
-      return;
-    }
-    try {
-      console.log("[DEBUG] Fetching machines from Firestore...");
-      const machinesCollection = collection(db, 'machines');
-      const machineSnapshot = await getDocs(machinesCollection);
+      if (!currentUser) {
+        return;
+      }
+      try {
+        console.log("[DEBUG] Fetching machines from Firestore...");
+        const machinesCollection = collection(db, 'machines');
+        const machineSnapshot = await getDocs(machinesCollection);
 
-      const machinesList = machineSnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          status: data.status as 'pendente' | 'agendado' | 'concluido',
-        } as Machine;
-      });
-      setMachines(machinesList);
-      console.log(`[DEBUG] Loaded ${machinesList.length} machines from Firestore.`);
+        const machinesList = machineSnapshot.docs.map(doc => {
+          const data = doc.data();
+          const status: 'pendente' | 'agendado' | 'concluido' = data.dataRealizacao
+            ? 'concluido'
+            : data.proximaManutencao
+            ? new Date(data.proximaManutencao) < new Date(currentDayString)
+              ? 'pendente'
+              : 'agendado'
+            : 'pendente';
 
-    } catch (error) {
-      console.error("?? [DEBUG] Erro ao carregar máquinas do Firestore:", error);
-    }
-  };
+          return {
+            id: doc.id,
+            ...data,
+            status,
+          } as Machine;
+        });
+        setMachines(machinesList);
+        console.log(`[DEBUG] Loaded ${machinesList.length} machines from Firestore.`);
+
+      } catch (error) {
+        console.error("?? [DEBUG] Erro ao carregar máquinas do Firestore:", error);
+      }
+    };
+
     fetchMachines();
   }, [currentDayString, currentUser]);
 
@@ -441,16 +527,16 @@ const MaintenanceApp = () => {
   }, [tab, currentUser]);
 
   const filteredEquipamentos = machines.filter((m) => {
-    const matchSearch = m.maquina.toLowerCase().includes(searchTerm.toLowerCase()) || m.etiqueta.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchSector = !selectedSector || m.setor === selectedSector;
-    return matchSearch && matchSector;
-  }).sort((a, b) => {
-    if (sortOrder === 'asc') {
-      return a.maquina.localeCompare(b.maquina);
-    } else {
-      return b.maquina.localeCompare(a.maquina);
-    }
-  });
+  const matchSearch = m.maquina.toLowerCase().includes(searchTerm.toLowerCase()) || m.etiqueta.toLowerCase().includes(searchTerm.toLowerCase());
+  const matchSector = !selectedSector || m.setor === selectedSector;
+  return matchSearch && matchSector;
+}).sort((a, b) => {
+  if (sortOrder === 'asc') {
+    return a.maquina.localeCompare(b.maquina);
+  } else {
+    return b.maquina.localeCompare(a.maquina);
+  }
+});
 
   const agendadas = machines.filter(
     (m) => !m.dataRealizacao && m.proximaManutencao && new Date(m.proximaManutencao) >= new Date(currentDayString)
@@ -469,49 +555,78 @@ const MaintenanceApp = () => {
   const realizadasCount = realizedMaintenance.length;
 
   const handleSortByMaquina = () => {
-    setSortOrder(prevSortOrder => (prevSortOrder === 'asc' ? 'desc' : 'asc'));
-  };
+  setSortOrder(prevSortOrder => (prevSortOrder === 'asc' ? 'desc' : 'asc'));
+};
   
-  const handleEdit = (machineToEdit: Machine) => {
-    setEditingMachine(machineToEdit);
-    setShowMachineForm(true);
-  };
-  
-  const handleUpdate = async (id: string, formData: Omit<Machine, 'id'>) => {
+const handleEdit = async (machineToEdit: Machine) => {
+    let lastChamado = '';
+    
     try {
-      const machineDocRef = doc(db, 'machines', id);
-      
-      const calculatedStatus: 'pendente' | 'agendado' | 'concluido' = formData.dataRealizacao
-        ? 'concluido'
-        : formData.proximaManutencao
-        ? new Date(formData.proximaManutencao) < new Date(currentDayString)
-          ? 'pendente'
-          : 'agendado'
-        : 'pendente';
-  
-      // 🔑 mantém o chamado já gravado se o formData vier vazio
-      const dataToUpdate = {
-        ...formData,
-        chamado: formData.chamado || (machines.find(m => m.id === id)?.chamado ?? ''),
-        status: calculatedStatus,
-        timestampUltimaAtualizacao: new Date(),
-      };
-
-      await updateDoc(machineDocRef, dataToUpdate);
-
-      setMachines((prev) =>
-        prev.map((m) =>
-          m.id === id ? { id: id, ...dataToUpdate } as Machine : m
-        )
+      const historyCollection = collection(db, 'maintenance_history');
+      const q = query(
+        historyCollection,
+        where('maquina', '==', machineToEdit.maquina),
+        where('setor', '==', machineToEdit.setor),
+        orderBy('timestampConclusao', 'desc'),
+        limit(1)
       );
-      console.log("Máquina atualizada no Firestore com ID:", id);
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        const lastMaintenance = querySnapshot.docs[0].data();
+        // Concatena o número do chamado e a data de realização
+        lastChamado = `${lastMaintenance.chamado} - ${lastMaintenance.dataRealizacao}`;
+      }
     } catch (error) {
-      console.error("Erro ao atualizar máquina no Firestore:", error);
-    } finally {
-      setEditingMachine(null);
-      setShowMachineForm(false);
+      console.error("Erro ao buscar histórico de manutenção:", error);
     }
-  }; 
+
+    const machineWithLastChamado = {
+      ...machineToEdit,
+      // Atribui o valor formatado ao campo 'chamado'
+      chamado: lastChamado, 
+    };
+    
+    setEditingMachine(machineWithLastChamado);
+    setShowMachineForm(true);
+};
+  
+const handleUpdate = async (id: string, formData: Omit<Machine, 'id'>) => {
+  try {
+    const machineDocRef = doc(db, 'machines', id);
+
+    const calculatedStatus: 'pendente' | 'agendado' | 'concluido' = formData.dataRealizacao
+      ? 'concluido'
+      : formData.proximaManutencao
+      ? new Date(formData.proximaManutencao) < new Date(currentDayString)
+        ? 'pendente'
+        : 'agendado'
+      : 'pendente';
+
+    // 🔑 mantém o chamado já gravado se o formData vier vazio
+    const dataToUpdate = {
+      ...formData,
+      chamado: formData.chamado || (machines.find(m => m.id === id)?.chamado ?? ''),
+      status: calculatedStatus,
+      timestampUltimaAtualizacao: new Date(),
+    };
+
+    await updateDoc(machineDocRef, dataToUpdate);
+
+    setMachines((prev) =>
+      prev.map((m) =>
+        m.id === id ? { id: id, ...dataToUpdate } as Machine : m
+      )
+    );
+    console.log("Máquina atualizada no Firestore com ID:", id);
+  } catch (error) {
+    console.error("Erro ao atualizar máquina no Firestore:", error);
+  } finally {
+    setEditingMachine(null);
+    setShowMachineForm(false);
+  }
+};
+
 
   const handleDelete = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir este equipamento?')) {
@@ -526,7 +641,7 @@ const MaintenanceApp = () => {
     }
   };
 
-    const handleSave = async (formData: Omit<Machine, 'id'>) => {
+  const handleSave = async (formData: Omit<Machine, 'id'>) => {
     try {
       const calculatedStatus: 'pendente' | 'agendado' | 'concluido' = formData.dataRealizacao
         ? 'concluido'
@@ -534,7 +649,7 @@ const MaintenanceApp = () => {
         ? new Date(formData.proximaManutencao) < new Date(currentDayString)
           ? 'pendente'
           : 'agendado'
-        : 'agendado'; // <-- Mudei de 'pendente' para 'agendado' aqui.
+        : 'pendente';
   
       const newMachineData = {
         ...formData,
@@ -554,7 +669,6 @@ const MaintenanceApp = () => {
       setShowMachineForm(false);
     }
   };
-
 
   const handleCreateAppointment = async (machineId: string, appointmentDate: string) => {
     try {
@@ -602,53 +716,67 @@ const MaintenanceApp = () => {
   };
 
 const handleCompleteMaintenance = async (
-    id: string,
-    newDateRealizacao: string,
-    newChamado: string
+  id: string,
+  newDateRealizacao: string,
+  newChamado: string
 ) => {
-    try {
-      const machineDocRef = doc(db, 'machines', id);
-      const machineToUpdate = machines.find(m => m.id === id);
+  try {
+    const machineDocRef = doc(db, 'machines', id);
+    const machineToUpdate = machines.find(m => m.id === id);
 
-      if (!machineToUpdate) {
-        console.error("Máquina não encontrada para concluir manutenção.");
-        return;
-      }
-      
-      const [year, month, day] = newDateRealizacao.split('-').map(Number);
-      const baseDate = new Date(Date.UTC(year, month - 1, day));
-      let calculatedNextMaintenanceDateObj = new Date(baseDate.setDate(baseDate.getDate() + 90));
-      calculatedNextMaintenanceDateObj = getNextBusinessDay(calculatedNextMaintenanceDateObj);
-      const nextMaintenanceDate = calculatedNextMaintenanceDateObj.toISOString().split('T')[0];
-
-      const newStatus: 'pendente' | 'agendado' | 'concluido' =
-        new Date(nextMaintenanceDate) < new Date(currentDayString) ? 'pendente' : 'agendado';
-
-      // Salva o histórico diretamente no documento da máquina
-      const dataToUpdate = {
-        proximaManutencao: nextMaintenanceDate,
-        dataRealizacao: newDateRealizacao, // GRAVA A DATA DE REALIZAÇÃO
-        chamado: `${newChamado} - ${newDateRealizacao}`, // GRAVA O CHAMADO FORMATADO
-        status: newStatus,
-        timestampUltimaAtualizacao: new Date(),
-      };
-
-      await updateDoc(machineDocRef, dataToUpdate);
-
-      setMachines((prev) =>
-        prev.map((m) =>
-          m.id === id ? { ...m, ...dataToUpdate, status: newStatus } : m
-        )
-      );
-
-      console.log("Registro da máquina atualizado para o próximo ciclo. ID:", id);
-
-    } catch (error) {
-      console.error("Erro ao finalizar manutenção ou criar histórico:", error);
-    } finally {
-      setShowCompletionForm(null);
+    if (!machineToUpdate) {
+      console.error("Máquina não encontrada para concluir manutenção.");
+      return;
     }
-  };
+
+    // Salva no histórico
+    const historyData = {
+      machineId: id,
+      setor: machineToUpdate.setor,
+      maquina: machineToUpdate.maquina,
+      etiqueta: machineToUpdate.etiqueta,
+      chamado: newChamado,
+      dataRealizacao: newDateRealizacao,
+      timestampConclusao: new Date(),
+    };
+    await addDoc(collection(db, 'maintenance_history'), historyData);
+    console.log("Histórico de manutenção salvo com sucesso!");
+
+    // Calcula próxima manutenção (90 dias úteis depois)
+    const [year, month, day] = newDateRealizacao.split('-').map(Number);
+    const baseDate = new Date(Date.UTC(year, month - 1, day));
+    let calculatedNextMaintenanceDateObj = new Date(baseDate.setDate(baseDate.getDate() + 90));
+    calculatedNextMaintenanceDateObj = getNextBusinessDay(calculatedNextMaintenanceDateObj);
+    const nextMaintenanceDate = calculatedNextMaintenanceDateObj.toISOString().split('T')[0];
+
+    const newStatus: 'pendente' | 'agendado' | 'concluido' =
+      new Date(nextMaintenanceDate) < new Date(currentDayString) ? 'pendente' : 'agendado';
+
+    // Atualiza o documento da máquina com o chamado formatado
+    const dataToUpdate = {
+      proximaManutencao: nextMaintenanceDate,
+      dataRealizacao: newDateRealizacao,
+      chamado: `${newChamado} - ${newDateRealizacao}`, // ✅ Corrigido
+      status: newStatus,
+      timestampUltimaAtualizacao: new Date(),
+    };
+
+    await updateDoc(machineDocRef, dataToUpdate);
+
+    setMachines((prev) =>
+      prev.map((m) =>
+        m.id === id ? { ...m, ...dataToUpdate, status: newStatus } : m
+      )
+    );
+
+    console.log("Registro da máquina atualizado com último chamado e próximo ciclo. ID:", id);
+
+  } catch (error) {
+    console.error("Erro ao finalizar manutenção ou criar histórico:", error);
+  } finally {
+    setShowCompletionForm(null);
+  }
+};
 
   const handleLogout = async () => {
     try {
@@ -777,27 +905,19 @@ const handleCompleteMaintenance = async (
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Setor</th>
                     <th
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                      onClick={handleSortByMaquina}
-                    >
-                      <div className="flex items-center">
-                        Máquina
-                        {tab === 'equipamentos' && (
-                          <span className="ml-2">
-                            {sortOrder === 'asc' ? '▲' : '▼'}
-                          </span>
-                        )}
-                      </div>
-                    </th>
+  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+  onClick={handleSortByMaquina}
+>
+  <div className="flex items-center">
+    Máquina
+    {tab === 'equipamentos' && (
+      <span className="ml-2">
+        {sortOrder === 'asc' ? '▲' : '▼'}
+      </span>
+    )}
+  </div>
+</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Etiqueta</th>
-
-                    {/* ✅ NOVO CAMPO: exibido apenas em Realizadas */}
-                    {tab === 'realizadas' && (
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Número do Chamado
-                      </th>
-                    )}
-
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       {tab === 'realizadas' ? 'Realização' : 'Próxima Manutenção'}
                     </th>
@@ -815,12 +935,6 @@ const handleCompleteMaintenance = async (
                       <td className="px-6 py-4 whitespace-nowrap">{m.setor}</td>
                       <td className="px-6 py-4 whitespace-nowrap">{m.maquina}</td>
                       <td className="px-6 py-4 whitespace-nowrap">{m.etiqueta}</td>
-
-                      {/* ✅ NOVA COLUNA: mostra número do chamado em Realizadas */}
-                      {tab === 'realizadas' && (
-                        <td className="px-6 py-4 whitespace-nowrap">{m.chamado}</td>
-                      )}
-
                       <td className="px-6 py-4 whitespace-nowrap">
                         {tab === 'realizadas' ? m.dataRealizacao : m.proximaManutencao}
                       </td>
@@ -884,16 +998,12 @@ const handleCompleteMaintenance = async (
       {showMachineForm && (
         <MachineForm
           machine={editingMachine}
-          onSave={
-            editingMachine
-              ? (formData) => handleUpdate(editingMachine.id, formData)
-              : handleSave
-          }
+          onSave={editingMachine ? (formData) => handleUpdate(editingMachine.id, formData) : handleSave}
           onCancel={() => {
             setShowMachineForm(false);
             setEditingMachine(null);
           }}
-          sectors={sectors}  // ✅ agora passando corretamente
+          sectors={sectors}
         />
       )}
 
@@ -909,9 +1019,7 @@ const handleCompleteMaintenance = async (
       {showCompletionForm && (
         <CompletionForm
           machineId={showCompletionForm.id}
-          currentDateRealizacao={
-            showCompletionForm.dataRealizacao || currentDayString
-          }
+          currentDateRealizacao={showCompletionForm.dataRealizacao || currentDayString}
           currentChamado={showCompletionForm.chamado || ''}
           onSave={handleCompleteMaintenance}
           onCancel={() => setShowCompletionForm(null)}
@@ -921,9 +1029,7 @@ const handleCompleteMaintenance = async (
       {showEditAppointmentForm && (
         <EditAppointmentForm
           machineId={showEditAppointmentForm.id}
-          currentProximaManutencao={
-            showEditAppointmentForm.proximaManutencao || ''
-          }
+          currentProximaManutencao={showEditAppointmentForm.proximaManutencao || ''}
           onSave={handleEditAppointmentDate}
           onCancel={() => setShowEditAppointmentForm(null)}
           referenceDate={currentDayString}
@@ -932,8 +1038,5 @@ const handleCompleteMaintenance = async (
     </div>
   );
 };
-
-export default MaintenanceApp;
-
 
 export default MaintenanceApp;
