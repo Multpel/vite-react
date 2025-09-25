@@ -571,36 +571,38 @@ const MaintenanceApp = () => {
 };
   
 const handleEdit = async (machineToEdit: Machine) => {
-    let lastChamado = '';
+  if (!machineToEdit || !machineToEdit.id) {
+    console.error("Máquina inválida ou ID ausente para edição.");
+    return;
+  }
+  let lastChamado = '';
+  
+  try {
+    const historyCollection = collection(db, 'maintenance_history');
+    const q = query(
+      historyCollection,
+      where('maquina', '==', machineToEdit.maquina),
+      where('setor', '==', machineToEdit.setor),
+      orderBy('timestampConclusao', 'desc'),
+      limit(1)
+    );
+    const querySnapshot = await getDocs(q);
     
-    try {
-      const historyCollection = collection(db, 'maintenance_history');
-      const q = query(
-        historyCollection,
-        where('maquina', '==', machineToEdit.maquina),
-        where('setor', '==', machineToEdit.setor),
-        orderBy('timestampConclusao', 'desc'),
-        limit(1)
-      );
-      const querySnapshot = await getDocs(q);
-      
-      if (!querySnapshot.empty) {
-        const lastMaintenance = querySnapshot.docs[0].data();
-        // Concatena o número do chamado e a data de realização
-        lastChamado = `${lastMaintenance.chamado} - ${lastMaintenance.dataRealizacao}`;
-      }
-    } catch (error) {
-      console.error("Erro ao buscar histórico de manutenção:", error);
+    if (!querySnapshot.empty) {
+      const lastMaintenance = querySnapshot.docs[0].data();
+      lastChamado = `${lastMaintenance.chamado} - ${lastMaintenance.dataRealizacao}`;
     }
+  } catch (error) {
+    console.error("Erro ao buscar histórico de manutenção:", error);
+  }
 
-    const machineWithLastChamado = {
-      ...machineToEdit,
-      // Atribui o valor formatado ao campo 'chamado'
-      chamado: lastChamado, 
-    };
-    
-    setEditingMachine(machineWithLastChamado);
-    setShowMachineForm(true);
+  const machineWithLastChamado = {
+    ...machineToEdit, 
+    chamado: lastChamado, 
+  };
+  
+  setEditingMachine(machineWithLastChamado); 
+  setShowMachineForm(true);
 };
   
 const handleUpdate = async (id: string, formData: Omit<Machine, 'id'>) => {
