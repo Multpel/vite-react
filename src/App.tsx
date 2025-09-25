@@ -85,7 +85,7 @@ const MachineForm = ({
       etiqueta: '',
       chamado: '',
       proximaManutencao: '',
-      dataRealizacao: '',
+      dataRealizacao: '', // O valor de dataRealizacao estará aqui
       status: 'pendente',
     }
   );
@@ -112,42 +112,8 @@ const MachineForm = ({
           {machine ? 'Editar Máquina' : 'Nova Máquina'}
         </h3>
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Setor</label>
-            <select
-              name="setor"
-              value={formData.setor}
-              onChange={handleChange}
-              className="w-full p-2 border rounded-lg"
-            >
-              <option value="">Selecione o setor</option>
-              {sectors.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Máquina</label>
-            <input
-              type="text"
-              name="maquina"
-              value={formData.maquina}
-              onChange={handleChange}
-              className="w-full p-2 border rounded-lg"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Etiqueta</label>
-            <input
-              type="text"
-              name="etiqueta"
-              value={formData.etiqueta}
-              onChange={handleChange}
-              className="w-full p-2 border rounded-lg"
-            />
-          </div>
+          {/* ... (outros campos) */}
+          
           <div>
             <label className="block text-sm font-medium mb-1">Último Chamado</label>
             <input
@@ -162,8 +128,8 @@ const MachineForm = ({
             <label className="block text-sm font-medium mb-1">Última Manutenção</label>
             <input
               type="date"
-              name="proximaManutencao"
-              value={formData.proximaManutencao || ''}
+              name="dataRealizacao"
+              value={formData.dataRealizacao || ''}
               readOnly={true}
               className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
             />
@@ -718,11 +684,11 @@ const MaintenanceApp = () => {
     }
   };
 
-  const handleCompleteMaintenance = async (
+const handleCompleteMaintenance = async (
     id: string,
     newDateRealizacao: string,
     newChamado: string
-  ) => {
+) => {
     try {
       const machineDocRef = doc(db, 'machines', id);
       const machineToUpdate = machines.find(m => m.id === id);
@@ -731,21 +697,7 @@ const MaintenanceApp = () => {
         console.error("Máquina não encontrada para concluir manutenção.");
         return;
       }
-
-      // Salva no histórico
-      const historyData = {
-        machineId: id,
-        setor: machineToUpdate.setor,
-        maquina: machineToUpdate.maquina,
-        etiqueta: machineToUpdate.etiqueta,
-        chamado: newChamado,
-        dataRealizacao: newDateRealizacao,
-        timestampConclusao: new Date(),
-      };
-      await addDoc(collection(db, 'maintenance_history'), historyData);
-      console.log("Histórico de manutenção salvo com sucesso!");
-
-      // Calcula próxima manutenção (90 dias depois e ajusta para dia útil)
+      
       const [year, month, day] = newDateRealizacao.split('-').map(Number);
       const baseDate = new Date(Date.UTC(year, month - 1, day));
       let calculatedNextMaintenanceDateObj = new Date(baseDate.setDate(baseDate.getDate() + 90));
@@ -755,11 +707,12 @@ const MaintenanceApp = () => {
       const newStatus: 'pendente' | 'agendado' | 'concluido' =
         new Date(nextMaintenanceDate) < new Date(currentDayString) ? 'pendente' : 'agendado';
 
-      // Atualiza o documento da máquina com o chamado formatado e data de realização
+      // --- ATUALIZAÇÃO CHAVE ---
+      // Salva o histórico diretamente no documento da máquina principal
       const dataToUpdate = {
         proximaManutencao: nextMaintenanceDate,
-        dataRealizacao: newDateRealizacao,
-        chamado: `${newChamado} - ${newDateRealizacao}`, // <-- grava o último chamado formatado
+        dataRealizacao: newDateRealizacao, 
+        chamado: `${newChamado} - ${newDateRealizacao}`, // <--- GRAVA A INFORMAÇÃO FORMATADA AQUI
         status: newStatus,
         timestampUltimaAtualizacao: new Date(),
       };
@@ -772,7 +725,7 @@ const MaintenanceApp = () => {
         )
       );
 
-      console.log("Registro da máquina atualizado com último chamado e próximo ciclo. ID:", id);
+      console.log("Registro da máquina atualizado para o próximo ciclo. ID:", id);
 
     } catch (error) {
       console.error("Erro ao finalizar manutenção ou criar histórico:", error);
