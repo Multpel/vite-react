@@ -884,11 +884,16 @@ const handleCompleteMaintenance = async (
       {showMachineForm && (
         <MachineForm
           machine={editingMachine}
-          onSave={editingMachine ? (formData) => handleUpdate(editingMachine.id, formData) : handleSave}
+          onSave={
+            editingMachine
+              ? (formData) => handleUpdate(editingMachine.id, formData)
+              : handleSave
+          }
           onCancel={() => {
             setShowMachineForm(false);
             setEditingMachine(null);
           }}
+          sectors={sectors}  // ✅ agora passando corretamente
         />
       )}
 
@@ -904,7 +909,9 @@ const handleCompleteMaintenance = async (
       {showCompletionForm && (
         <CompletionForm
           machineId={showCompletionForm.id}
-          currentDateRealizacao={showCompletionForm.dataRealizacao || currentDayString}
+          currentDateRealizacao={
+            showCompletionForm.dataRealizacao || currentDayString
+          }
           currentChamado={showCompletionForm.chamado || ''}
           onSave={handleCompleteMaintenance}
           onCancel={() => setShowCompletionForm(null)}
@@ -914,7 +921,9 @@ const handleCompleteMaintenance = async (
       {showEditAppointmentForm && (
         <EditAppointmentForm
           machineId={showEditAppointmentForm.id}
-          currentProximaManutencao={showEditAppointmentForm.proximaManutencao || ''}
+          currentProximaManutencao={
+            showEditAppointmentForm.proximaManutencao || ''
+          }
           onSave={handleEditAppointmentDate}
           onCancel={() => setShowEditAppointmentForm(null)}
           referenceDate={currentDayString}
@@ -923,5 +932,8 @@ const handleCompleteMaintenance = async (
     </div>
   );
 };
+
+export default MaintenanceApp;
+
 
 export default MaintenanceApp;
