@@ -194,7 +194,8 @@ const AppointmentForm = ({
     const [error, setError] = useState<string | null>(null);
 
     const availableMachines = machines.filter(m =>
-        !m.dataRealizacao && (!m.proximaManutencao || new Date(m.proximaManutencao) < new Date(today))
+        m.status === 'agendado' // Agora o filtro inclui máquinas com status 'agendado'
+        // A lógica de data já é tratada pelo status, então o filtro fica mais simples.
     );
 
     const handleSubmit = () => {
@@ -604,7 +605,7 @@ const MaintenanceApp = () => {
     }
   };
 
-  const handleSave = async (formData: Omit<Machine, 'id'>) => {
+    const handleSave = async (formData: Omit<Machine, 'id'>) => {
     try {
       const calculatedStatus: 'pendente' | 'agendado' | 'concluido' = formData.dataRealizacao
         ? 'concluido'
@@ -612,7 +613,7 @@ const MaintenanceApp = () => {
         ? new Date(formData.proximaManutencao) < new Date(currentDayString)
           ? 'pendente'
           : 'agendado'
-        : 'pendente';
+        : 'agendado'; // <-- Mudei de 'pendente' para 'agendado' aqui.
   
       const newMachineData = {
         ...formData,
@@ -631,6 +632,7 @@ const MaintenanceApp = () => {
       setEditingMachine(null);
       setShowMachineForm(false);
     }
+  };
   };
 
   const handleCreateAppointment = async (machineId: string, appointmentDate: string) => {
