@@ -783,7 +783,7 @@ const handleCompleteMaintenance = async (
       console.error("newDateRealizacao é undefined. Não é possível calcular a próxima manutenção.");
       return;
     }
-    const [year, month, day] = newDateRealizacao.split(\'-\'").map(Number);
+    const [year, month, day] = newDateRealizacao.split('-').map(Number);
     const baseDate = new Date(Date.UTC(year, month - 1, day));
     let initialNextMaintenanceDate = new Date(baseDate.setDate(baseDate.getDate() + 90));
     const nextMaintenanceDate = await findNextAvailableBusinessDay(id, initialNextMaintenanceDate);
