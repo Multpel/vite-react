@@ -752,8 +752,8 @@ const handleCompleteMaintenance = async (
   newChamado: string,
   id?: string | undefined
 ) => {
-  if (!id) {
-    console.error("ID da máquina não fornecido para concluir manutenção.");
+  if (!id ||) {
+    console.error(""Parâmetros inválidos para concluir manutenção.");
     return;
   }
   try {
