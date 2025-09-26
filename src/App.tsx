@@ -666,9 +666,9 @@ const handleUpdate = async (id: string, formData: Omit<Machine, 'id'>) => {
     }
   };
 
- const handleSave = async (formData: Machine) => {
+ cconst handleSave = async (formData: Machine, id?: string) => {
   try {
-    const { id, ...dataWithoutId } = formData;
+    const { id: _, ...dataWithoutId } = formData;
     
     const calculatedStatus: 'pendente' | 'agendado' | 'concluido' = dataWithoutId.dataRealizacao
       ? 'concluido'
