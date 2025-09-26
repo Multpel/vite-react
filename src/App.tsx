@@ -40,7 +40,12 @@ const getNextBusinessDay = (date: Date): Date => {
   return newDate;
 };
 
-const findNextAvailableBusinessDay = async (machineId: string, startDate: Date): Promise<string> => {
+const findNextAvailableBusinessDay = async (machineId?: string, startDate: Date): Promise<string> => {
+  if (!machineId) {
+    console.error("ID da máquina não fornecido.");
+    return startDate.toISOString().split('T')[0]; // devolve a própria data ou algum fallback
+  }
+
   let currentDate = new Date(startDate.getTime());
   let nextDateString = '';
   let found = false;
@@ -48,16 +53,15 @@ const findNextAvailableBusinessDay = async (machineId: string, startDate: Date):
   while (!found) {
     currentDate = getNextBusinessDay(currentDate);
     nextDateString = currentDate.toISOString().split('T')[0];
-    const isBooked = await isDateBooked(machineId ||'', nextDateString);
+    const isBooked = await isDateBooked(machineId, nextDateString);
     if (!isBooked) {
       found = true;
     } else {
-      currentDate.setDate(currentDate.getDate() + 1); // Move to the next day if booked
+      currentDate.setDate(currentDate.getDate() + 1);
     }
   }
   return nextDateString;
 };
-
 
 // --- 2. COMPONENTES AUXILIARES ---
 const TabButton = ({
@@ -748,8 +752,8 @@ const handleUpdate = async (id: string, formData: Omit<Machine, 'id'>) => {
 };
 
 const handleCompleteMaintenance = async (
-  newDateRealizacao: string,
-  newChamado: string,
+  newDateRealizacao?: string,
+  newChamado?: string,
   id?: string
 ) => {
   if (!id || !newDateRealizacao || !newChamado) {
