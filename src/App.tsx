@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, ChangeEvent } from 'react';
+import { useState, useEffect, ChangeEvent } from 'react';
 import { Calendar, Search, Plus, LogOut, Edit } from 'lucide-react';
 import { db, auth } from './firebase-config';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, orderBy, limit, onSnapshot, QuerySnapshot, DocumentData, QueryDocumentSnapshot  } from 'firebase/firestore';
@@ -748,9 +748,9 @@ const handleUpdate = async (id: string, formData: Omit<Machine, 'id'>) => {
 };
 
 const handleCompleteMaintenance = async (
-  id?: string, // ✅ AQUI. O 'id' agora é opcional para resolver o erro TS2345.
-  newDateRealizacao?: string,
-  newChamado?: string
+  newDateRealizacao: string,
+  newChamado: string,
+  id: string | undefined
 ) => {
   if (!id) {
     console.error("ID da máquina não fornecido para concluir manutenção.");
@@ -779,7 +779,11 @@ const handleCompleteMaintenance = async (
     console.log("Histórico de manutenção salvo com sucesso!");
 
     // Calcula próxima manutenção (90 dias úteis depois)
-    const [year, month, day] = newDateRealizacao.split('-').map(Number);
+     if (!newDateRealizacao) {
+      console.error("newDateRealizacao é undefined. Não é possível calcular a próxima manutenção.");
+      return;
+    }
+    const [year, month, day] = newDateRealizacao.split(\'-\'").map(Number);
     const baseDate = new Date(Date.UTC(year, month - 1, day));
     let initialNextMaintenanceDate = new Date(baseDate.setDate(baseDate.getDate() + 90));
     const nextMaintenanceDate = await findNextAvailableBusinessDay(id, initialNextMaintenanceDate);
@@ -1057,10 +1061,10 @@ const handleCompleteMaintenance = async (
       {showCompletionForm && (
         <CompletionForm
           // AQUI: Usamos a condição `showCompletionForm?.id` para garantir que o ID existe.
-          machineId={showCompletionForm.id || ''}
+          machineId={showCompletionForm?.id || ''}
           currentDateRealizacao={showCompletionForm?.dataRealizacao || currentDayString}
           currentChamado={showCompletionForm?.chamado || ''}
-          onSave={handleCompleteMaintenance}
+          onSave={(dateRealizacao, chamado) => handleCompleteMaintenance(dateRealizacao, chamado, showCompletionForm?.id)}
           onCancel={() => setShowCompletionForm(null)}
         />
       )}
