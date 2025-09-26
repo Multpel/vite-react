@@ -750,10 +750,10 @@ const handleUpdate = async (id: string, formData: Omit<Machine, 'id'>) => {
 const handleCompleteMaintenance = async (
   newDateRealizacao: string,
   newChamado: string,
-  id?: string | undefined
+  id?: string
 ) => {
-  if (!id ||) {
-    console.error(""Parâmetros inválidos para concluir manutenção.");
+  if (!id || !newDateRealizacao || !newChamado) {
+    console.error("Parâmetros inválidos para concluir manutenção.");
     return;
   }
   try {
