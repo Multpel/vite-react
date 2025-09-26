@@ -749,8 +749,8 @@ const handleUpdate = async (id: string, formData: Omit<Machine, 'id'>) => {
 
 const handleCompleteMaintenance = async (
   id?: string, // ✅ AQUI. O 'id' agora é opcional para resolver o erro TS2345.
-  newDateRealizacao: string,
-  newChamado: string
+  newDateRealizacao?: string,
+  newChamado?: string
 ) => {
   if (!id) {
     console.error("ID da máquina não fornecido para concluir manutenção.");
@@ -1057,7 +1057,7 @@ const handleCompleteMaintenance = async (
       {showCompletionForm && (
         <CompletionForm
           // AQUI: Usamos a condição `showCompletionForm?.id` para garantir que o ID existe.
-          machineId={showCompletionForm?.id || ''}
+          machineId={showCompletionForm.id || ''}
           currentDateRealizacao={showCompletionForm?.dataRealizacao || currentDayString}
           currentChamado={showCompletionForm?.chamado || ''}
           onSave={handleCompleteMaintenance}
@@ -1068,7 +1068,7 @@ const handleCompleteMaintenance = async (
       {showEditAppointmentForm && (
         <EditAppointmentForm
           // AQUI: Usamos a condição `showEditAppointmentForm?.id` para garantir que o ID existe.
-          machineId={showEditAppointmentForm?.id || ''}
+          machineId={showEditAppointmentForm.id || ''}
           currentProximaManutencao={showEditAppointmentForm?.proximaManutencao || ''}
           onSave={handleEditAppointmentDate}
           onCancel={() => setShowEditAppointmentForm(null)}
@@ -1081,7 +1081,7 @@ const handleCompleteMaintenance = async (
 
 export default MaintenanceApp;
 
-const isDateBooked = async (machineId?: string, date: string): Promise<boolean> => {
+const isDateBooked = async (machineId: string | undefined, date: string): Promise<boolean> => {
   const machinesRef = collection(db, 'machines');
   const q = query(
     machinesRef,
