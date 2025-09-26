@@ -48,7 +48,7 @@ const findNextAvailableBusinessDay = async (machineId: string, startDate: Date):
   while (!found) {
     currentDate = getNextBusinessDay(currentDate);
     nextDateString = currentDate.toISOString().split('T')[0];
-    const isBooked = await isDateBooked(machineId, nextDateString);
+    const isBooked = await isDateBooked(machineId ||'', nextDateString);
     if (!isBooked) {
       found = true;
     } else {
@@ -750,7 +750,7 @@ const handleUpdate = async (id: string, formData: Omit<Machine, 'id'>) => {
 const handleCompleteMaintenance = async (
   newDateRealizacao: string,
   newChamado: string,
-  id: string | undefined
+  id?: string | undefined
 ) => {
   if (!id) {
     console.error("ID da máquina não fornecido para concluir manutenção.");
@@ -786,7 +786,7 @@ const handleCompleteMaintenance = async (
     const [year, month, day] = newDateRealizacao.split('-').map(Number);
     const baseDate = new Date(Date.UTC(year, month - 1, day));
     let initialNextMaintenanceDate = new Date(baseDate.setDate(baseDate.getDate() + 90));
-    const nextMaintenanceDate = await findNextAvailableBusinessDay(id, initialNextMaintenanceDate);
+    const nextMaintenanceDate = await findNextAvailableBusinessDay(id ||'', initialNextMaintenanceDate);
     console.log(`[DEBUG] Calculated nextMaintenanceDate: ${nextMaintenanceDate}`);
 
     const newStatus: 'pendente' | 'agendado' | 'concluido' =
@@ -1060,13 +1060,15 @@ const handleCompleteMaintenance = async (
 
       {showCompletionForm && (
         <CompletionForm
-          // AQUI: Usamos a condição `showCompletionForm?.id` para garantir que o ID existe.
-          machineId={showCompletionForm?.id || ''}
-          currentDateRealizacao={showCompletionForm?.dataRealizacao || currentDayString}
-          currentChamado={showCompletionForm?.chamado || ''}
-          onSave={(dateRealizacao, chamado) => handleCompleteMaintenance(dateRealizacao, chamado, showCompletionForm?.id)}
-          onCancel={() => setShowCompletionForm(null)}
-        />
+  machineId={showCompletionForm?.id || ''}
+  currentDateRealizacao={showCompletionForm?.dataRealizacao || currentDayString}
+  currentChamado={showCompletionForm?.chamado || ''}
+  onSave={(dateRealizacao, chamado) =>
+    handleCompleteMaintenance(dateRealizacao, chamado, showCompletionForm?.id)
+  }
+  onCancel={() => setShowCompletionForm(null)}
+/>
+
       )}
 
       {showEditAppointmentForm && (
