@@ -666,7 +666,7 @@ const handleUpdate = async (id: string, formData: Omit<Machine, 'id'>) => {
     }
   };
 
- cconst handleSave = async (formData: Machine, id?: string) => {
+ const handleSave = async (formData: Machine, id?: string) => {
   try {
     const { id: _, ...dataWithoutId } = formData;
     
